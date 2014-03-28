@@ -101,7 +101,7 @@ MESHLOADER.loadMesh = function(contents, name){
 
     geometry.computeBoundingSphere();
     var s = 10 / geometry.boundingSphere.radius;
-    console.log(s);
+    console.log(geometry);
     //mesh.position.set( 0, - 0.25, 0 );
     //mesh.rotation.set( 0, - Math.PI / 2, 0 );
     mesh.scale.set( s, s, s );

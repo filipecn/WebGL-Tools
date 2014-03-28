@@ -1,13 +1,34 @@
 <!doctype html>
 <html lang="en">
 <head>
-	<title>Simple Cloth Simulation - Based on http://web.archive.org/web/20070610223835/http://www.teknikus.dk/tj/gdc2001.htm</title>
+	<title>Mocap</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 	<link rel=stylesheet href="css/base.css"/>
 </head>
 <body>
 
+<div id="infobutton">
+			<a href="javascript:toggleInfo()"><img src="images/i.png" border="0"></a>
+		</div>
+		<div id="info">
+				<B>Motion Capture - WebGL(html5)</B><BR>
+				<P>Loading some raw motion capture data(just points).<BR>And drawing the points as spheres, meet Mr Sphere-man.<BR><BR>
+				Some different test-files:<BR>
+				<a href="javascript:loadFile(0)">Figure Swagger 1</a><BR>
+				<a href="javascript:loadFile(1)">Figure HandSpring 1</a><BR>
+				<a href="javascript:loadFile(2)">Figure Quickwalk</a><BR>
+				<a href="javascript:loadFile(3)">Figure Run 1</a><BR>
+				<a href="javascript:loadFile(4)">Figure Sprint</a><BR>
+				<a href="javascript:loadFile(5)">Figure "dogwalk"</a><BR>
+				</P>
+				Done using <a href="https://github.com/mrdoob/three.js" target="_blank">three.js</a>.
+				<P><B>Note.</B> You need a modern browser that supports WebGL for this to run the way it is intended.<BR>
+				For example. <a href="http://www.google.com/landing/chrome/beta/" target="_blank">Google Chrome 9+</a> or <a href="http://www.mozilla.com/firefox/beta/" target="_blank">Firefox 4+</a>.</P>
+				<font color="#777777">(C) OutsideOfSociety 2010.
+		</div>
+
+<script type="text/javascript" src="js/info.js"></script>		
 <script src="js/Three.js"></script>
 <script src="js/Detector.js"></script>
 <script src="js/Stats.js"></script>
@@ -16,11 +37,16 @@
 <script src="js/THREEx.FullScreen.js"></script>
 <script src="js/THREEx.WindowResize.js"></script>
 
+<script type='text/javascript' src='js/DAT.GUI.min.js'></script>
+<script src="js/bvh-read.js"></script>
+
 <script src="js/Label.js"></script>
 <script src="js/Helpers.js"></script>
 <script src="js/Cloth.js"></script>
 
-<script type='text/javascript' src='js/DAT.GUI.min.js'></script>
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+
+<div style='height: 0px;width:0px; overflow:hidden;'><input type="file" id="files" name="file" class="button"/></div>
 
 <!-- Custom shaders for particle effects -->
 <script type="x-shader/x-vertex" id="vertexshader">
@@ -52,10 +78,6 @@ void main()
 </script>
 <!-- end of custom shaders -->
 
-<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
-
-<div style='height: 0px;width:0px; overflow:hidden;'><input type="file" id="files" name="file" class="button"/></div>
-
 <script>
 
 // MAIN
@@ -69,7 +91,7 @@ var clock = new THREE.Clock();
 var cloth, rigidBodies = [];
 var parameters;
 var gui;
-
+var play = false;
 
 init();
 animate();		
@@ -84,7 +106,7 @@ function init()
 	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
 	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
 	scene.add(camera);
-	camera.position.set(0,150,400);
+	camera.position.set(400,400,400);
 	camera.lookAt(scene.position);	
 	// RENDERER
 	if ( Detector.webgl )
@@ -100,68 +122,39 @@ function init()
 	// CONTROLS
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
 
+	document.getElementById('files').addEventListener('change', function(evt){ BVH.readText(evt.target); }, false);
+	BVH.init(scene);
+	BVH.ready = function(){
+		play = true;
+		//console.log(BVH.Bvh.root);
+		//BVH.Bvh.particleCollision();
+		rigidBodies.push(BVH.Bvh);
+		//cloth.update(rigidBodies);
+	};
+
 	////////////
 	// CUSTOM //
 	////////////
 	
-	HELPERS.cartesianGrid(scene);	
-	
+	HELPERS.cartesianGrid(scene);
+
 	gui = new dat.GUI();
 	
 	parameters = 
 	{
-		file: function() { document.getElementById("files").click(); }
+		file: function() { document.getElementById("files").click();  }
 	};
 		
-	gui.add( parameters, 'file' ).name("Open *.ply, *.obj or *.vtk files");
+	gui.add( parameters, 'file' ).name("Load *.bvh files");
 
 	gui.open();
 
-	cloth = new CLOTH.Cloth(scene,20,20,10);
-	cloth.addPivot(0,0,new THREE.Vector3(0,150,0));
-	cloth.addPivot(cloth.NW-1, 0, new THREE.Vector3(0,150,(cloth.NH-1)*cloth.L));
-	cloth.addPivot(0,cloth.NH-1, new THREE.Vector3((cloth.NW-1)*cloth.L,150,0));
-	cloth.addPivot(cloth.NW-1, cloth.NH-1, new THREE.Vector3((cloth.NW-1)*cloth.L,150,(cloth.NH-1)*cloth.L));
-
-	//for(var i = 0; i < 1; i++)
-	//	cloth.update();
-
-	// FUN STUFF
-	
-	var rigidSphere = {
-		init: function(){
-			var geometry = new THREE.SphereGeometry( 20, 32, 32 );
-			var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
-			this.sphere = new THREE.Mesh( geometry, material );	
-			this.simulationStep = 0;
-			scene.add( this.sphere );
-		},
-		move: function(){
-			var t = this.simulationStep/70;
-			this.simulationStep++;
-
-			this.sphere.position = new THREE.Vector3(
-				20.0 * Math.cos(2.0 * t) * (3.0 + Math.cos(3.0 * t)),
-				20.0 * Math.sin(2.0 * t) * (3.0 + Math.cos(3.0 * t)),
-				50.0 * Math.sin(3.0 * t) );
-			this.sphere.position.add(new THREE.Vector3(100,100,100));
-		},
-		particleCollision: function(particle){
-			var delta = particle.clone();
-			delta.sub(this.sphere.position);
-			if(delta.dot(delta) <= this.sphere.geometry.radius*this.sphere.geometry.radius){
-				delta.setLength(this.sphere.geometry.radius);
-				delta.add(this.sphere.position);
-				return delta;
-			}
-			return particle;
-		}
-	};
-
-	rigidSphere.init();
-	rigidBodies.push(rigidSphere);
-	//for(var i = 0; i < 1; i++)
-	//	cloth.update(rigidBodies);
+	//CLOTH
+	cloth = new CLOTH.Cloth(scene,4,8,10);
+	cloth.addPivot(0,0,new THREE.Vector3(0,200,100));
+	//cloth.addPivot(cloth.NW-1, 0, new THREE.Vector3(0,200,(cloth.NH-1)*cloth.L));
+	cloth.addPivot(0,cloth.NH-1, new THREE.Vector3((cloth.NH-1)*cloth.L,200,100));
+	//cloth.addPivot(cloth.NW-1, cloth.NH-1, new THREE.Vector3((cloth.NW-1)*cloth.L,200,(cloth.NH-1)*cloth.L));
 }
 
 function animate() 
@@ -169,14 +162,19 @@ function animate()
     requestAnimationFrame( animate );
 	render();		
 	update();
+	if(play){
+		BVH.animate();
+		//rigidBodies[0].animate();
+		cloth.update(rigidBodies);
+	}
+	else 
+		cloth.update([]);
+	
 }
 
 function update()
 {	
 	controls.update();
-	
-	rigidBodies[0].move();
-	cloth.update(rigidBodies);
 }
 
 function render() 

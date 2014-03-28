@@ -16,21 +16,25 @@ CLOTH.data = function(){
 		};
 };
 
+
+
 CLOTH.Constraint = function(a, b, r){
 	this.a = a;
 	this.b = b;
 	this.restlength = r;
 };
 
-CLOTH.Cloth = function(scene){
+CLOTH.Cloth = function(scene, w, h, l){
 	//CLOTH PARAMETERS
-	this.L = 10;
-	this.NW = 20;
-	this.NH = 20;
+	this.L = l || 10;
+	this.NW = w || 20;
+	this.NH = h || 20;
+	this.pivot = [];
 	var geometry = new THREE.Geometry();
 	for(var x = 0; x < this.NW; x++)
 		for(var z = 0; z < this.NH; z++){
 			geometry.vertices.push(new THREE.Vector3(x*this.L, 150, z*this.L))
+			this.pivot.push([false, new THREE.Vector3(0,0,0)]);
 		}
 
 	//SIMULATION DATA
@@ -46,19 +50,19 @@ CLOTH.Cloth = function(scene){
 		this.X.last[i] = geometry.vertices[i].clone();
 		this.M.cur[i] = i*0.5;
 	}
-	this.iterationsNumber = 3;
+	this.iterationsNumber = 1;
 	this.constraints = [];
 	for(var i = 0; i < this.NW; i++)
 		for(var j = 0; j < this.NH; j++){
 			var d = 1;
 			if(i < this.NW - d)
-				this.constraints.push(new CLOTH.Constraint(j*this.NW + i,j*this.NW + i + d,d*this.L));
+				this.constraints.push(new CLOTH.Constraint(this.index(i,j),this.index(i+d,j),d*this.L));
 			if(j < this.NH - d)
-				this.constraints.push(new CLOTH.Constraint(j*this.NW + i,(j+d)*this.NW + i,d*this.L));
+				this.constraints.push(new CLOTH.Constraint(this.index(i,j),this.index(i,j+d),d*this.L));
 			if(i < this.NW - d && j < this.NH - d)
-				this.constraints.push(new CLOTH.Constraint(j*this.NW + i,(j+d)*this.NW + i + d,d*this.L*Math.sqrt(2.0)));
+				this.constraints.push(new CLOTH.Constraint(this.index(i,j),this.index(i+d,j+d),d*this.L*Math.sqrt(2.0)));
 			if(i >= 0 + d && j < this.NH - d)
-				this.constraints.push(new CLOTH.Constraint(j*this.NW + i,(j+d)*this.NW + i - d,d*this.L*Math.sqrt(2.0)));
+				this.constraints.push(new CLOTH.Constraint(this.index(i,j),this.index(i-d,j+d),d*this.L*Math.sqrt(2.0)));
 				
 		}
 
@@ -100,12 +104,6 @@ CLOTH.Cloth = function(scene){
 	this.points.dynamic = true;
 	this.points.sortParticles = true;
 	scene.add( this.points );
-
-	// FUN STUFF
-	var geometry = new THREE.SphereGeometry( 20, 32, 32 );
-	var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
-	this.sphere = new THREE.Mesh( geometry, material );
-	scene.add( this.sphere );
 };
 
 CLOTH.Cloth.prototype.verlet = function(){
@@ -124,12 +122,13 @@ CLOTH.Cloth.prototype.accumulateForces = function(){
 	}
 };
 
-CLOTH.Cloth.prototype.satisfyConstraints = function(){
+CLOTH.Cloth.prototype.satisfyConstraints = function(bodies){
 	for(var it = 0; it < this.iterationsNumber; it++){
+		// BBOX
 		for(var i = 0; i < this.N; i++){
 			this.X.cur[i].clamp(new THREE.Vector3(-50,-50,-50), new THREE.Vector3(200,200,200));
 		}
-
+		// CONSTRAINTS
 		for(var i = 0; i < this.constraints.length; i++){
 			var x1 = this.X.cur[this.constraints[i].a].clone();
 			var x2 = this.X.cur[this.constraints[i].b].clone();
@@ -147,48 +146,38 @@ CLOTH.Cloth.prototype.satisfyConstraints = function(){
 			this.X.cur[this.constraints[i].b].z -= 0.5*delta.z*diff;
 		}
 
-		for(var i = 0; i < this.N; i++){
-			var delta = this.X.cur[i].clone();
-			delta.sub(this.sphere.position);
-			//console.log(delta.dot(delta) + " " + this.sphere.geometry.radius*this.sphere.geometry.radius );
-			if(delta.dot(delta) <= this.sphere.geometry.radius*this.sphere.geometry.radius){
-				//console.log("c!");
-				delta.setLength(this.sphere.geometry.radius);
-				delta.add(this.sphere.position);
-				this.X.cur[i].copy(delta);
+		for(var b = 0; b < bodies.length; b++){
+			for(var i = 0; i < this.N; i++){
+				//console.log(this.X.cur[i]);
+				this.X.cur[i].copy(bodies[b].particleCollision(this.X.cur[i]));
 			}
 		}
 
-		this.X.cur[0].set(0,150,0);
-		this.X.cur[this.NW-1].set(0,150,(this.NH-1)*this.L);
-		this.X.cur[(this.NH-1)*this.NW].set((this.NW-1)*this.L,150,0);
-		this.X.cur[this.NH*this.NW - 1].set((this.NW-1)*this.L,150,(this.NH-1)*this.L);
-		
+		// PIVOTS
+		for(var i = 0; i < this.pivot.length; i++){
+			if(this.pivot[i][0]){
+				this.X.cur[i].copy(this.pivot[i][1]);
+			}
+		}
 	}
 };
 
-CLOTH.Cloth.prototype.update = function(){
-	var t = this.simulationStep/70;
-	this.simulationStep++;
+CLOTH.Cloth.prototype.index = function(x,y){
+	return y*this.NW + x;
+};
 
-	this.sphere.position = new THREE.Vector3(
-			20.0 * Math.cos(2.0 * t) * (3.0 + Math.cos(3.0 * t)),
-			20.0 * Math.sin(2.0 * t) * (3.0 + Math.cos(3.0 * t)),
-			50.0 * Math.sin(3.0 * t) );
-	this.sphere.position.add(new THREE.Vector3(100,100,100));
-
+CLOTH.Cloth.prototype.update = function(bodies){
 	this.accumulateForces();
 	this.verlet();
-	this.satisfyConstraints();
-	//console.log("antes");
-	//console.log(this.points.geometry.vertices[0]);
-	//console.log(this.points.geometry.vertices[1]);
-	//console.log("depois");
-	for(var i = 0; i < this.N; i++){
+	this.satisfyConstraints(bodies);
+
+	for(var i = 0; i < this.N; i++)
 		this.points.geometry.vertices[i].copy(this.X.cur[i]);
-	//	console.log(this.points.geometry.vertices[i]);
-	}
+	
 	this.points.geometry.verticesNeedUpdate = true;
 };
 
-//CLOTH.Cloth.update.addContraint(t)
+CLOTH.Cloth.prototype.addPivot = function(x, y, pivot){
+	this.pivot[this.index(x,y)][0] = true;
+	this.pivot[this.index(x,y)][1].copy(pivot);
+};
