@@ -109,6 +109,8 @@ BVH.Bvh.animate = function( frame ) {
 };	
 
 BVH.animate = function() {
+	BVH.Bvh.root.updateMatrixWorld();
+	//BVH.scene.updateMatrixWorld();
 	//if ( Bvh.play.checked ) { 
 		var frame = ( (Date.now() - BVH.Bvh.startTime ) / BVH.Bvh.secsPerFrame / 1000) | 0; 
 		BVH.Bvh.animate( frame ); 
@@ -120,11 +122,11 @@ BVH.Bvh.parseNode = function( data ) {
 		'rThumb1', 'rThumb2', 'rIndex1', 'rIndex2', 'rMid1', 'rMid2', 'rRing1', 'rRing2', 'rPinky1', 'rPinky2',
 		'lThumb1', 'lThumb2', 'lIndex1', 'lIndex2', 'lMid1', 'lMid2', 'lRing1', 'lRing2', 'lPinky1', 'lPinky2'
 	];
-	
+	var radius = 3;
 	name = data.shift();
-	material = new THREE.MeshNormalMaterial();
+	material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
 	if ( name === 'Site' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(20);
 		node = new THREE.Mesh(geometry, material);
 		
 		// node = new THREE.Object3D();
@@ -143,24 +145,24 @@ BVH.Bvh.parseNode = function( data ) {
 		
 
 	} else if ( name === 'neck' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
 
 	} else if ( name === 'lCollar' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
 	} else if ( name === 'rCollar' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
 
 	} else if ( name === 'lShldr' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
@@ -171,7 +173,7 @@ BVH.Bvh.parseNode = function( data ) {
 		node.add( mesh );
 
 	} else if ( name === 'rShldr' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		node = new THREE.Mesh(geometry, material);
 		
 
@@ -181,18 +183,18 @@ BVH.Bvh.parseNode = function( data ) {
 		node.add( mesh );
 
 	} else if ( name === 'lForeArm' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
 
 		geometry = new THREE.CubeGeometry( 30, 3, 3 );
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 15, 0, 0 ) );
-		mesh = new THREE.Mesh(geometry, material);
+		mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( {color: 0xffff00} ) );
 		node.add( mesh );
 
 	} else if ( name === 'rForeArm' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
@@ -203,19 +205,19 @@ BVH.Bvh.parseNode = function( data ) {
 		node.add( mesh );
 
 	} else if ( name === 'lHand') {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
 
 	} else if ( name === 'rHand' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
 
 	} else if ( name === 'chest' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
@@ -226,7 +228,7 @@ BVH.Bvh.parseNode = function( data ) {
 		node.add( mesh );
 
 	} else if ( name === 'abdomen' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
@@ -237,20 +239,20 @@ BVH.Bvh.parseNode = function( data ) {
 		node.add( mesh );
 
 	} else if ( name === 'lButtock') {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
 
 
 	} else if ( name === 'rButtock') {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
 
 	} else if ( name === 'rThigh' ||  name === 'lThigh') {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
@@ -261,7 +263,7 @@ BVH.Bvh.parseNode = function( data ) {
 		node.add( mesh );
 
 	} else if ( name === 'lShin' || name === 'rShin' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
@@ -272,7 +274,7 @@ BVH.Bvh.parseNode = function( data ) {
 		node.add( mesh );
 
 	} else if ( name === 'lFoot' || name === 'rFoot' ) {
-		geometry = new THREE.SphereGeometry( 5 );
+		geometry = new THREE.SphereGeometry(radius);
 		geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0 ) );
 		node = new THREE.Mesh(geometry, material);
 		
@@ -283,7 +285,7 @@ BVH.Bvh.parseNode = function( data ) {
 		node.add( mesh );
 
 	} else {
-		geometry = new THREE.CubeGeometry( 5, 5, 5 );
+		geometry = new THREE.CubeGeometry( 5, 5, 5);
 		material = new THREE.MeshNormalMaterial();
 		node = new THREE.Mesh(geometry, material);
 		
@@ -319,17 +321,18 @@ BVH.Bvh.parseNode = function( data ) {
 };	
 
 BVH.Bvh.particleCollision = function(particle){
-	//console.log(particle);
 	var newP = particle.clone();
 
 	BVH.Bvh.root.traverse(function(child){
-		child.geometry.computeBoundingSphere();
-		var r = child.geometry.boundingSphere.radius;
+		if(child.name !='Site') return;
+		child.parent.updateMatrixWorld();
+		var r = child.geometry.radius;//child.geometry.boundingSphere.radius;
 		var p = child.position.clone();
+		child.localToWorld(p);
 		var delta = particle.clone();
 		delta.sub(p);
+			
 		if(delta.dot(delta) <= r*r){
-			console.log("delta!0");
 			delta.setLength(r);
 			delta.add(p);
 			newP.copy(delta);

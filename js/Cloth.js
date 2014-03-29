@@ -50,7 +50,7 @@ CLOTH.Cloth = function(scene, w, h, l){
 		this.X.last[i] = geometry.vertices[i].clone();
 		this.M.cur[i] = i*0.5;
 	}
-	this.iterationsNumber = 1;
+	this.iterationsNumber = 3;
 	this.constraints = [];
 	for(var i = 0; i < this.NW; i++)
 		for(var j = 0; j < this.NH; j++){
@@ -149,7 +149,8 @@ CLOTH.Cloth.prototype.satisfyConstraints = function(bodies){
 		for(var b = 0; b < bodies.length; b++){
 			for(var i = 0; i < this.N; i++){
 				//console.log(this.X.cur[i]);
-				this.X.cur[i].copy(bodies[b].particleCollision(this.X.cur[i]));
+				//if(i == this.N-1)
+					this.X.cur[i].copy(bodies[b].particleCollision(this.X.cur[i]));
 			}
 		}
 

@@ -88,7 +88,7 @@ var keyboard = new THREEx.KeyboardState();
 var clock = new THREE.Clock();
 
 // custom global variables
-var cloth, rigidBodies = [];
+var cloth = [], rigidBodies = [];
 var parameters;
 var gui;
 var play = false;
@@ -126,10 +126,9 @@ function init()
 	BVH.init(scene);
 	BVH.ready = function(){
 		play = true;
-		//console.log(BVH.Bvh.root);
-		//BVH.Bvh.particleCollision();
+		console.log(BVH.Bvh.root);
 		rigidBodies.push(BVH.Bvh);
-		//cloth.update(rigidBodies);
+		cloth.update(rigidBodies);
 	};
 
 	////////////
@@ -150,10 +149,16 @@ function init()
 	gui.open();
 
 	//CLOTH
-	cloth = new CLOTH.Cloth(scene,4,8,10);
+	cloth = new CLOTH.Cloth(scene,8,20,10);
 	cloth.addPivot(0,0,new THREE.Vector3(0,200,100));
+	//cloth.addPivot(0,0,new THREE.Vector3(90,180,100));
 	//cloth.addPivot(cloth.NW-1, 0, new THREE.Vector3(0,200,(cloth.NH-1)*cloth.L));
 	cloth.addPivot(0,cloth.NH-1, new THREE.Vector3((cloth.NH-1)*cloth.L,200,100));
+
+	for(var i = 0; i < cloth.NH; i++){
+		cloth.addPivot(0,i, new THREE.Vector3(i*cloth.L,200,100));	
+	}
+	//cloth.addPivot(0,cloth.NH-1, new THREE.Vector3(100,180,100));
 	//cloth.addPivot(cloth.NW-1, cloth.NH-1, new THREE.Vector3((cloth.NW-1)*cloth.L,200,(cloth.NH-1)*cloth.L));
 }
 
@@ -167,7 +172,8 @@ function animate()
 		//rigidBodies[0].animate();
 		cloth.update(rigidBodies);
 	}
-	else 
+	else
+	//if(!play) 
 		cloth.update([]);
 	
 }
