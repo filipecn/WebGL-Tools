@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>IntVis</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel=stylesheet href="css/base.css"/>
+</head>
+<body>
+
+<div id="infobutton">
+			<a href="javascript:toggleInfo()"><img src="images/i.png" border="0"></a>
+		</div>
+		<div id="info">
+				<B>Motion Capture - WebGL(html5)</B><BR>
+				<P>Loading some raw motion capture data(just points).<BR>And drawing the points as spheres, meet Mr Sphere-man.<BR><BR>
+				Some different test-files:<BR>
+				<a href="javascript:loadFile(0)">Figure Swagger 1</a><BR>
+				<a href="javascript:loadFile(1)">Figure HandSpring 1</a><BR>
+				<a href="javascript:loadFile(2)">Figure Quickwalk</a><BR>
+				<a href="javascript:loadFile(3)">Figure Run 1</a><BR>
+				<a href="javascript:loadFile(4)">Figure Sprint</a><BR>
+				<a href="javascript:loadFile(5)">Figure "dogwalk"</a><BR>
+				</P>
+				Done using <a href="https://github.com/mrdoob/three.js" target="_blank">three.js</a>.
+				<P><B>Note.</B> You need a modern browser that supports WebGL for this to run the way it is intended.<BR>
+				For example. <a href="http://www.google.com/landing/chrome/beta/" target="_blank">Google Chrome 9+</a> or <a href="http://www.mozilla.com/firefox/beta/" target="_blank">Firefox 4+</a>.</P>
+				<font color="#777777">(C) OutsideOfSociety 2010.
+		</div>
+
+<script type="text/javascript" src="js/info.js"></script>		
+<script src="js/Three.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/Stats.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/THREEx.KeyboardState.js"></script>
+<script src="js/THREEx.FullScreen.js"></script>
+<script src="js/THREEx.WindowResize.js"></script>
+
+<script type='text/javascript' src='js/DAT.GUI.min.js'></script>
+
+<script src="js/Label.js"></script>
+<script src="js/Helpers.js"></script>
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+
+<div style='height: 0px;width:0px; overflow:hidden;'><input type="file" id="files" name="file" class="button"/></div>
+
+<script>
+
+// MAIN
+
+// standard global variables
+var container, scene, camera, renderer, controls;
+var keyboard = new THREEx.KeyboardState();
+var clock = new THREE.Clock();
+
+// custom global variables
+var parameters;
+var gui;
+var projector, raycaster, currentIntersected, sphereInter, mouse = { x: 0, y: 0 }, INTERSECTED, MESH_INTERSECTED;
+var linesList = [], particlesList = [], meshList = [];
+
+var PI2 = Math.PI * 2;
+
+var programFill = function ( context ) {
+
+	context.beginPath();
+	context.arc( 0, 0, 0.5, 0, PI2, true );
+	context.fill();
+
+}
+
+var programStroke = function ( context ) {
+
+	context.lineWidth = 0.025;
+	context.beginPath();
+	context.arc( 0, 0, 0.5, 0, PI2, true );
+	context.stroke();
+
+}
+
+init();
+animate();		
+
+// FUNCTIONS 		
+function init() 
+{
+	// SCENE
+	scene = new THREE.Scene();
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	scene.add(camera);
+	camera.position.set(400,0,0);
+	camera.lookAt(scene.position);	
+	// RENDERER
+	//if ( Detector.webgl )
+	//	renderer = new THREE.WebGLRenderer( {antialias:true} );
+	//else
+		renderer = new THREE.CanvasRenderer(); 
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	container = document.getElementById( 'ThreeJS' );
+	container.appendChild( renderer.domElement );
+	// EVENTS
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+	// CONTROLS
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+	////////////
+	// CUSTOM //
+	////////////
+
+	for ( var i = 0; i < 100; i++ ) {
+        var particle = new THREE.Particle(new THREE.ParticleCanvasMaterial( { color: Math.random() * 0x808008 + 0x808080, program: programFill  } ) );
+        particle.name = "particle"+i;
+        particle.position.x = Math.random() * 200 - 100;
+        particle.position.y = Math.random() * 200 - 100;
+        particle.position.z = Math.random() * 200 - 100;
+       // particle.scale.x = particle.scale.y = Math.random() * 10 + 5;
+        particle.scale.x = particle.scale.y = 10;
+        scene.add( particle );
+        particlesList.push(particle);
+    }
+
+    var geometry = new THREE.Geometry();
+
+	var point = new THREE.Vector3();
+	var direction = new THREE.Vector3();
+
+	for ( var i = 0; i < 100; i ++ ) {
+
+		direction.x += Math.random() - 0.5;
+		direction.y += Math.random() - 0.5;
+		direction.z += Math.random() - 0.5;
+
+		point.add( direction );
+
+		geometry.vertices.push( point.clone() );
+
+	}
+
+	parentTransform = new THREE.Object3D();
+	parentTransform.position.z = 400;
+
+	for ( var i = 0; i < 20; i ++ ) {
+
+		var type = Math.random() > 0.5 ? THREE.LineStrip : THREE.LinePieces;
+		var object = new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: Math.random() * 0xffffff } ), type );
+		
+		object.position.x = Math.random() * 100 - 50;
+		object.position.y = Math.random() * 100 - 50;
+		object.position.z = Math.random() * 100 - 50;
+
+		object.rotation.x = Math.random() * 2 * Math.PI;
+		object.rotation.y = Math.random() * 2 * Math.PI;
+		object.rotation.z = Math.random() * 2 * Math.PI;
+
+		parentTransform.add( object );
+
+	}
+
+	linesList.push(parentTransform);
+	scene.add(parentTransform);
+
+
+	//////////////////////////////////////////////////////////////////////
+
+	// this material causes a mesh to use colors assigned to faces
+	var faceColorMaterial = new THREE.MeshBasicMaterial( 
+	{ color: 0xffffff, vertexColors: THREE.FaceColors } );
+	
+	var sphereGeometry = new THREE.SphereGeometry( 80, 32, 16 );
+	for ( var i = 0; i < sphereGeometry.faces.length; i++ ) 
+	{
+		face = sphereGeometry.faces[ i ];	
+		face.color.setRGB( 0, 0, 0.8);// * Math.random() + 0.2 );		
+	}
+	var sphere = new THREE.Mesh( sphereGeometry, faceColorMaterial );
+	sphere.position.set(0, 0, -400);
+	scene.add(sphere);
+	
+	meshList.push(sphere);
+	
+	//////////////////////////////////////////////////////////////////////
+
+
+	// initialize object to perform world/screen calculations
+	projector = new THREE.Projector();
+	raycaster = new THREE.Raycaster();
+	raycaster.linePrecision = 3;
+	
+	// when the mouse moves, call the given function
+	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+}
+
+function onDocumentMouseMove( event ) 
+{
+	event.preventDefault();
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+
+function detectFace(){
+	// create a Ray with origin at the mouse position
+	//   and direction into the scene (camera direction)
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+	projector.unprojectVector( vector, camera );
+	var ray = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+	// create an array containing all objects in the scene with which the ray intersects
+	var intersects = ray.intersectObjects( meshList );
+	
+	if ( MESH_INTERSECTED ) 
+				MESH_INTERSECTED.face.color.setRGB( 0, 0, 0.8 ); 
+	// if there is one (or more) intersections
+	if ( intersects.length > 0 )
+	{
+		MESH_INTERSECTED = intersects[0];
+		// change the color of the closest face.
+		intersects[ 0 ].face.color.setRGB( 0.8, 0, 0 ); 
+		intersects[ 0 ].object.geometry.colorsNeedUpdate = true;
+	}
+	else MESH_INTERSECTED = null;
+}
+
+function detectParticle(){
+	// find intersections
+
+	// create a Ray with origin at the mouse position
+	//   and direction into the scene (camera direction)
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+	projector.unprojectVector( vector, camera );
+	var ray = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+	// create an array containing all objects in the scene with which the ray intersects
+	var intersects = ray.intersectObjects( particlesList );
+
+	if ( intersects.length > 0 )
+	{
+		if ( intersects[ 0 ].object != INTERSECTED ) 
+		{
+			if ( INTERSECTED ) 
+				INTERSECTED.scale.x = INTERSECTED.scale.y = 10;
+			INTERSECTED = intersects[ 0 ].object;
+			INTERSECTED.scale.x = INTERSECTED.scale.y =  15;
+		}
+	} 
+	else 
+	{
+		if ( INTERSECTED ) 
+			INTERSECTED.scale.x = INTERSECTED.scale.y = 10;
+		INTERSECTED = null;
+	}
+}
+
+function detectLine(){
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+	projector.unprojectVector( vector, camera );
+
+	raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
+
+	var intersects = raycaster.intersectObjects( linesList, true);
+
+	if ( intersects.length > 0 ) {
+		if ( currentIntersected !== undefined ) {
+			currentIntersected.material.linewidth = 1;
+		}
+		currentIntersected = intersects[ 0 ].object;
+		currentIntersected.material.linewidth = 5;
+	} else {
+		if ( currentIntersected !== undefined ) {
+			currentIntersected.material.linewidth = 1;
+		}
+		currentIntersected = undefined;
+	}
+}
+
+function update()
+{
+	detectLine();
+	detectParticle();
+	detectFace();
+	
+	controls.update();
+}
+
+function render() 
+{
+	renderer.render( scene, camera );
+}
+
+</script>
+
+</body>
+</html>

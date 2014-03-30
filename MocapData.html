@@ -88,7 +88,7 @@ var keyboard = new THREEx.KeyboardState();
 var clock = new THREE.Clock();
 
 // custom global variables
-var cloth = [], rigidBodies = [];
+var cloths = [], rigidBodies = [];
 var parameters;
 var gui;
 var play = false;
@@ -128,7 +128,7 @@ function init()
 		play = true;
 		console.log(BVH.Bvh.root);
 		rigidBodies.push(BVH.Bvh);
-		cloth.update(rigidBodies);
+		//cloth.update(rigidBodies);
 	};
 
 	////////////
@@ -149,17 +149,18 @@ function init()
 	gui.open();
 
 	//CLOTH
-	cloth = new CLOTH.Cloth(scene,8,20,10);
-	cloth.addPivot(0,0,new THREE.Vector3(0,200,100));
-	//cloth.addPivot(0,0,new THREE.Vector3(90,180,100));
-	//cloth.addPivot(cloth.NW-1, 0, new THREE.Vector3(0,200,(cloth.NH-1)*cloth.L));
-	cloth.addPivot(0,cloth.NH-1, new THREE.Vector3((cloth.NH-1)*cloth.L,200,100));
+	cloths[0] = new CLOTH.Cloth(scene,26,20,5);
 
-	for(var i = 0; i < cloth.NH; i++){
-		cloth.addPivot(0,i, new THREE.Vector3(i*cloth.L,200,100));	
+	for(var i = 0; i < cloths[0].NH; i++){
+		cloths[0].addPivot(0,i, new THREE.Vector3(i*cloths[0].L,200,100));	
 	}
-	//cloth.addPivot(0,cloth.NH-1, new THREE.Vector3(100,180,100));
-	//cloth.addPivot(cloth.NW-1, cloth.NH-1, new THREE.Vector3((cloth.NW-1)*cloth.L,200,(cloth.NH-1)*cloth.L));
+
+	cloths[1] = new CLOTH.Cloth(scene,26,20,5);
+
+	for(var i = 0; i < cloths[1].NH; i++){
+		cloths[1].addPivot(0,i, new THREE.Vector3(i*cloths[1].L + cloths[0].L*(cloths[0].NH-1),200,100));	
+	}
+
 }
 
 function animate() 
@@ -170,11 +171,14 @@ function animate()
 	if(play){
 		BVH.animate();
 		//rigidBodies[0].animate();
-		cloth.update(rigidBodies);
+		cloths[0].update(rigidBodies);
+		cloths[1].update(rigidBodies);
 	}
-	else
+	else{
 	//if(!play) 
-		cloth.update([]);
+		cloths[0].update([]);
+		cloths[1].update([]);
+	}
 	
 }
 

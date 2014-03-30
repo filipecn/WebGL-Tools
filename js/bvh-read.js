@@ -124,9 +124,9 @@ BVH.Bvh.parseNode = function( data ) {
 	];
 	var radius = 3;
 	name = data.shift();
-	material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+	material = new THREE.MeshBasicMaterial( {color: 0x9944ff} );
 	if ( name === 'Site' ) {
-		geometry = new THREE.SphereGeometry(20);
+		geometry = new THREE.SphereGeometry(15);
 		node = new THREE.Mesh(geometry, material);
 		
 		// node = new THREE.Object3D();
@@ -326,7 +326,7 @@ BVH.Bvh.particleCollision = function(particle){
 	BVH.Bvh.root.traverse(function(child){
 		if(child.name !='Site') return;
 		child.parent.updateMatrixWorld();
-		var r = child.geometry.radius;//child.geometry.boundingSphere.radius;
+		var r = child.geometry.radius;
 		var p = child.position.clone();
 		child.localToWorld(p);
 		var delta = particle.clone();
