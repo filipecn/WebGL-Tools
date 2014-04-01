@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="en">
 <head>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+	<script src="js/info.js"></script>
+
 	<title>IntVis</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
@@ -9,24 +13,24 @@
 <body>
 
 <div id="infobutton">
-			<a href="javascript:toggleInfo()"><img src="images/i.png" border="0"></a>
-		</div>
-		<div id="info">
-				<B>Motion Capture - WebGL(html5)</B><BR>
-				<P>Loading some raw motion capture data(just points).<BR>And drawing the points as spheres, meet Mr Sphere-man.<BR><BR>
-				Some different test-files:<BR>
-				<a href="javascript:loadFile(0)">Figure Swagger 1</a><BR>
-				<a href="javascript:loadFile(1)">Figure HandSpring 1</a><BR>
-				<a href="javascript:loadFile(2)">Figure Quickwalk</a><BR>
-				<a href="javascript:loadFile(3)">Figure Run 1</a><BR>
-				<a href="javascript:loadFile(4)">Figure Sprint</a><BR>
-				<a href="javascript:loadFile(5)">Figure "dogwalk"</a><BR>
-				</P>
-				Done using <a href="https://github.com/mrdoob/three.js" target="_blank">three.js</a>.
-				<P><B>Note.</B> You need a modern browser that supports WebGL for this to run the way it is intended.<BR>
-				For example. <a href="http://www.google.com/landing/chrome/beta/" target="_blank">Google Chrome 9+</a> or <a href="http://www.mozilla.com/firefox/beta/" target="_blank">Firefox 4+</a>.</P>
-				<font color="#777777">(C) OutsideOfSociety 2010.
-		</div>
+	<a href="javascript:toggleInfo()"><img src="images/i.png" border="0"></a>
+</div>
+<div id="info">
+		<B>Motion Capture - WebGL(html5)</B><BR>
+		<P>Loading some raw motion capture data(just points).<BR>And drawing the points as spheres, meet Mr Sphere-man.<BR><BR>
+		Some different test-files:<BR>
+		<a href="javascript:loadFile(0)">Figure Swagger 1</a><BR>
+		<a href="javascript:loadFile(1)">Figure HandSpring 1</a><BR>
+		<a href="javascript:loadFile(2)">Figure Quickwalk</a><BR>
+		<a href="javascript:loadFile(3)">Figure Run 1</a><BR>
+		<a href="javascript:loadFile(4)">Figure Sprint</a><BR>
+		<a href="javascript:loadFile(5)">Figure "dogwalk"</a><BR>
+		</P>
+		Done using <a href="https://github.com/mrdoob/three.js" target="_blank">three.js</a>.
+		<P><B>Note.</B> You need a modern browser that supports WebGL for this to run the way it is intended.<BR>
+		For example. <a href="http://www.google.com/landing/chrome/beta/" target="_blank">Google Chrome 9+</a> or <a href="http://www.mozilla.com/firefox/beta/" target="_blank">Firefox 4+</a>.</P>
+		<font color="#777777">(C) OutsideOfSociety 2010.
+</div>
 
 <script type="text/javascript" src="js/info.js"></script>		
 <script src="js/Three.js"></script>
@@ -158,6 +162,8 @@ function init()
 		object.rotation.y = Math.random() * 2 * Math.PI;
 		object.rotation.z = Math.random() * 2 * Math.PI;
 
+		object.name = "line " + i;
+
 		parentTransform.add( object );
 
 	}
@@ -176,6 +182,7 @@ function init()
 	for ( var i = 0; i < sphereGeometry.faces.length; i++ ) 
 	{
 		face = sphereGeometry.faces[ i ];	
+		face.name = "face " + i;
 		face.color.setRGB( 0, 0, 0.8);// * Math.random() + 0.2 );		
 	}
 	var sphere = new THREE.Mesh( sphereGeometry, faceColorMaterial );
@@ -230,6 +237,7 @@ function detectFace(){
 		// change the color of the closest face.
 		intersects[ 0 ].face.color.setRGB( 0.8, 0, 0 ); 
 		intersects[ 0 ].object.geometry.colorsNeedUpdate = true;
+		$("#info").text(MESH_INTERSECTED.face.name);
 	}
 	else MESH_INTERSECTED = null;
 }
@@ -253,6 +261,7 @@ function detectParticle(){
 				INTERSECTED.scale.x = INTERSECTED.scale.y = 10;
 			INTERSECTED = intersects[ 0 ].object;
 			INTERSECTED.scale.x = INTERSECTED.scale.y =  15;
+			$("#info").text(INTERSECTED.name);
 		}
 	} 
 	else 
@@ -277,6 +286,8 @@ function detectLine(){
 		}
 		currentIntersected = intersects[ 0 ].object;
 		currentIntersected.material.linewidth = 5;
+		$("#info").text(currentIntersected.name);
+		openInfo();
 	} else {
 		if ( currentIntersected !== undefined ) {
 			currentIntersected.material.linewidth = 1;
