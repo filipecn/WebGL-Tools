@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Stable Fluids 2D 1</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #ffffff;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+		</style>
+	</head>
+	<body>
+
+		<div id="container"></div>
+
+		<script src="js/Detector.js"></script>
+		<script src="js/KeyboardState.js"></script>
+		<!--<script src="three.min.js"></script>-->
+		<script src="http://www.clicktorelease.com/code/spherical-normal-mapping/js/Three.js.pagespeed.jm.EHRYmpML6O.js"></script>
+
+		<script>
+
+			//WEBGL
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var keyboard = new KeyboardState();
+			var mouse = { x: 0, y: 0 };
+			var old_mouse = { x: 0, y: 0 };
+			var mouse_down = false;
+			var dens_mode = true;
+
+			var container, camera, renderer;
+			var scene;
+
+			var gridMesh, uVectors;
+
+			//CONSTANTS
+			var N = 50;
+			var size = (N+2)*(N+2);
+			var h = 1/N;
+			var dt = 0.1;
+			var diff = 0.0;
+			var visc = 0.0;
+			var force = 5.0;
+			var source = 100.0;
+
+			//UTILS
+			function IX(i,j){
+				return i + (N+2)* j;			
+			}
+
+			function swap(a, b){
+				var tmp = a;
+				a = b;
+				b = tmp;
+			}
+
+			//DATA
+			function data(){
+					return {
+						cur: [],
+						last: [],
+						swap: function() {
+								var tmp = this.cur;
+								this.cur = this.last;
+								this.last = tmp;
+							},
+						print: function() {
+							console.log("last " + this.last);
+							console.log("cur " + this.cur);
+						}
+					};
+				};
+
+			var U = data(), V = data(), dens = data();
+			//var U = [], U_prev = [], V = [], V_prev = [], dens = [], dens_prev = [];
+
+			function clear_data()
+			{
+				for ( var i = 0 ; i < size ; i++ ) {
+					U.cur[i] = V.cur[i] = U.last[i] = V.last[i] = dens.cur[i] = dens.last[i] = 0.0;
+				}
+			}
+
+			function add_source ( x, s )
+			{
+				for ( i=0 ; i<size ; i++ ) x[i] += dt*s[i];
+			}
+
+			function set_bnd ( b, x )
+			{
+				//console.log('preweee');
+				//console.log(x);
+				for ( var i=1 ; i<=N ; i++ ) {
+					x[IX(0  ,i)] = (b==1 ? -x[IX(1,i)] : x[IX(1,i)]);
+					x[IX(N+1,i)] = (b==1 ? -x[IX(N,i)] : x[IX(N,i)]);
+					x[IX(i,0  )] = (b==2 ? -x[IX(i,1)] : x[IX(i,1)]);
+					x[IX(i,N+1)] = (b==2 ? -x[IX(i,N)] : x[IX(i,N)]);
+				}
+				
+				x[IX(0  ,0  )] = 0.5*(x[IX(1,0  )]+x[IX(0  ,1)]);
+				x[IX(0  ,N+1)] = 0.5*(x[IX(1,N+1)]+x[IX(0  ,N)]);
+				x[IX(N+1,0  )] = 0.5*(x[IX(N,0  )]+x[IX(N+1,1)]);
+				x[IX(N+1,N+1)] = 0.5*(x[IX(N,N+1)]+x[IX(N+1,N)]);
+				//console.log('weeee');
+				//console.log(x);
+			}
+
+			function lin_solve ( b, x, x0, a, c )
+			{
+				//console.log("LIN_SOLVE" + b+' ' + a + ' ' + c);
+				//console.log("-----------------------------------------------------------------------");
+				
+				for ( var k=0 ; k<20 ; k++ ) {
+					for(var i = 1; i <= N; i++)
+						for (var j = 1; j <= N; j++) 
+							x[IX(i,j)] = (x0[IX(i,j)] + a*(x[IX(i-1,j)]+x[IX(i+1,j)]+x[IX(i,j-1)]+x[IX(i,j+1)]))/c;
+				//	console.log(x0);
+				//console.log(x);
+					set_bnd ( b, x );
+				//	console.log(x0);
+				//console.log(x);
+				}
+				//for(var i = 0; i <= N+1; i++)
+				//		for (var j = 0; j <= N+1; j++) 
+				//			console.log(IX(i, j));
+
+				//console.log("-----------------------------------------------------------------------");
+			}
+
+			function diffuse ( b, x )
+			{
+				var a=dt*diff*N*N;
+				//console.log(a);
+				lin_solve ( b, x.cur, x.last, a, 1+4*a );
+			}
+
+			function advect ( b, d, u, v )
+			{
+				var i0, j0, i1, j1;
+				var x, y, s0, t0, s1, t1, dt0;
+				//console.log("-----------------------------------");
+				//d.print();
+				dt0 = dt*N;
+				//console.log(dt0);
+				for(var i = 1; i <= N; i++)
+						for (var j = 1; j <= N; j++){ 
+							x = i-dt0*u[IX(i,j)]; y = j-dt0*v[IX(i,j)];
+					//		console.log(u[IX(i,j)] + " " + v[IX(i,j)]);
+					//		console.log(x + " " + y);
+							if (x<0.5) x=0.5; if (x>N+0.5) x=N+0.5; i0=Math.floor(x); i1=i0+1;
+							if (y<0.5) y=0.5; if (y>N+0.5) y=N+0.5; j0=Math.floor(y); j1=j0+1;
+							s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
+					//		console.log(s0 + " " + t0 + " " + s1 + " " + t1);
+					//		console.log(i0 + " " + j0 + " " + i1 + " " + j1);
+							d.cur[IX(i,j)] = s0*(t0*d.last[IX(i0,j0)]+t1*d.last[IX(i0,j1)])+
+										 s1*(t0*d.last[IX(i1,j0)]+t1*d.last[IX(i1,j1)]);
+					//		console.log(d.cur[IX(i,j)]);
+						}
+				//d.print();
+				//console.log("BOUNDARY");		
+				set_bnd ( b, d.cur );
+				//d.print();
+				//console.log("-----------------------------------");
+				
+			}
+
+			function project ( u, v, p, div )
+			{
+				for(var i = 1; i <= N; i++)
+						for (var j = 1; j <= N; j++){ 
+							div[IX(i,j)] = -0.5*(u[IX(i+1,j)]-u[IX(i-1,j)]+v[IX(i,j+1)]-v[IX(i,j-1)])/N;
+							p[IX(i,j)] = 0;
+						}	
+				set_bnd ( 0, div ); set_bnd ( 0, p );
+
+				lin_solve ( 0, p, div, 1, 4 );
+
+				for(var i = 1; i <= N; i++)
+					for (var j = 1; j <= N; j++){ 
+						u[IX(i,j)] -= 0.5*N*(p[IX(i+1,j)]-p[IX(i-1,j)]);
+						v[IX(i,j)] -= 0.5*N*(p[IX(i,j+1)]-p[IX(i,j-1)]);
+					}
+				set_bnd ( 1, u ); set_bnd ( 2, v );
+			}
+
+			function dens_step ( x, u, v )
+			{
+				//x.print();
+				add_source ( x.cur, x.last );
+				//x.print();
+				//console.log("diffuse");
+				x.swap(); diffuse ( 0, x );
+				//x.print();
+				x.swap(); 
+				//x.print();
+				//console.log("advect");
+				advect ( 0, x, u, v );
+				//x.print();
+			}
+
+			function vel_step ( u, v )
+			{
+				//console.log("vel_step");
+				//u.print(); 
+				add_source ( u.cur, u.last ); 
+				add_source ( v.cur, v.last );
+				//u.print();
+				//console.log("swap");
+				u.swap(); //u.print(); 
+				//console.log("diffuse");
+				diffuse ( 1, u ); //u.print();
+				v.swap(); diffuse ( 2, v );
+				//console.log("project");
+				project ( u.cur, v.cur, u.last, v.last );
+				//u.print();
+				//console.log("swap");
+				u.swap(); v.swap();
+				//u.print();
+				advect ( 1, u, u.last, v.last ); 
+				//u.print();
+				advect ( 2, v, u.last, v.last );
+				project ( u.cur, v.cur, u.last, v.last );
+			}
+			
+			init();
+			animate();
+
+			function init() {
+				container = document.getElementById( 'container' );
+
+				camera = new THREE.OrthographicCamera( 0, 1, 1, 0, -100000, 100000 );
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.autoClear = true;
+
+				container.appendChild( renderer.domElement );
+
+				projector = new THREE.Projector();
+				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+				document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				clear_data();
+
+				//SCENE
+				scene = new THREE.Scene();
+
+				var material = new THREE.MeshBasicMaterial( 
+				{ color: 0xffffff, vertexColors: THREE.VertexColors, side: THREE.DoubleSide/*, wireframe: true*/ } );
+
+				var gridGeometry=new THREE.Geometry();
+				for (var j = 0; j <= N+2; j++)
+					for (var i = 0; i <= N + 2; i++)
+					{
+
+						gridGeometry.vertices.push(new THREE.Vector3(i/(N) - h,j/(N) - h,-10));
+					}
+				
+				for(var j = 0; j < N + 2; j++)
+					for(var i = 0; i < N + 2; i++)
+					{
+						//console.log(i + "," + j);
+						var offset = j*(N+3) + i;
+						gridGeometry.faces.push(new THREE.Face4(offset,offset+1,offset + N+4, offset + N+3));
+						/*console.log(offset + " " + (offset+1) + " " + (offset + N+4) + " " + (offset + N+3));
+						console.log(gridGeometry.vertices[gridGeometry.faces[gridGeometry.faces.length-1].a]);
+						console.log(gridGeometry.vertices[gridGeometry.faces[gridGeometry.faces.length-1].b]);
+						console.log(gridGeometry.vertices[gridGeometry.faces[gridGeometry.faces.length-1].c]);
+						console.log(gridGeometry.vertices[gridGeometry.faces[gridGeometry.faces.length-1].d]);
+					*/
+					}
+				for ( var i = 0; i < gridGeometry.faces.length; i++ ) 
+					for(var v = 0; v < 4; v++)	
+						gridGeometry.faces[ i ].vertexColors[ v ] = new THREE.Color( 0x000000 );
+
+				gridMesh=new THREE.Mesh(gridGeometry,material);
+				scene.add(gridMesh);
+
+				for ( var k = 0; k < gridMesh.geometry.faces.length; k++ ){ 
+					var g = new THREE.Geometry();
+				//	console.log(k);
+					g.vertices.push(new THREE.Vector3(
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].a].x, 
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].a].y, 1));
+				//	console.log(g.vertices[g.vertices.length-1]);
+					g.vertices.push(new THREE.Vector3(
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].b].x, 
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].b].y, 1));
+				//	console.log(g.vertices[g.vertices.length-1]);
+					g.vertices.push(new THREE.Vector3(
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].c].x, 
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].c].y, 1));
+				//	console.log(g.vertices[g.vertices.length-1]);
+					g.vertices.push(new THREE.Vector3(
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].d].x, 
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].d].y, 1));
+				//	console.log(g.vertices[g.vertices.length-1]);
+					g.vertices.push(new THREE.Vector3(
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].a].x, 
+						gridMesh.geometry.vertices[gridMesh.geometry.faces[ k ].a].y, 1));
+				//	console.log(g.vertices[g.vertices.length-1]);
+					var c = 0xffffff;//0x000000 + 0x000005*k;
+					var line = new THREE.Line(g, new THREE.LineBasicMaterial({
+				        color: c
+				    }));
+
+				    //scene.add(line);	
+				}
+
+				uVectors = [];
+				k = 0;
+				for(var j = 0; j < N + 2; j++)
+						for(var i = 0; i < N + 2; i++){
+							var u_geometry = new THREE.Geometry();
+							var offset_i = (i-1)/N + 0.5/N;
+							var offset_j = (j-1)/N + 0.5/N;
+							if(j > 0 && i > 0 && i < N + 1 && j < N + 1){
+								k++;
+								u_geometry.vertices.push(new THREE.Vector3(offset_i,offset_j,1));
+								u_geometry.vertices.push(new THREE.Vector3(offset_i+0.3/N,offset_j+0.3/N,1));
+							}
+							else{
+								u_geometry.vertices.push(new THREE.Vector3(0,0,1));
+								u_geometry.vertices.push(new THREE.Vector3(0,0,1));	
+							}
+							var c = 0x00FF00;// + 0x000005*k;
+							uVectors.push(new THREE.Line(u_geometry, new THREE.LineBasicMaterial({color: c})));
+							//scene.add(uVectors[uVectors.length-1]);
+						}
+					
+					//for(var i = 0; i < uVectors.length; i++)
+			//			console.log(uVectors[5].geometry.vertices[0]);
+			}
+			
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+				update();
+			}
+
+			
+
+			function draw_density ()
+			{
+				var x, y, h;
+
+				h = 1.0/N;
+
+				for ( i=1 ; i<=N ; i++ ){
+					//x = (i-0.5)*h;
+					for ( j=1 ; j<=N ; j++ ) {
+					//	y = (j-0.5)*h;
+					//	console.log(x + " " + y);
+				//	}
+				//}
+				//for ( var k = 0; k < gridMesh.geometry.faces.length; k++ ){ 
+				//	var j = Math.floor(k / N);
+				//	var i = k - j*N;
+					if(i == 0 || i > N || j == 0 || j > N) 
+						continue;
+					//console.log(i + " " + j);
+					//console.log(dens.cur.length);
+					var d00 = dens.cur[IX(i,j)];
+					var d01 = dens.cur[IX(i,j+1)];
+					var d10 = dens.cur[IX(i+1,j)];
+					var d11 = dens.cur[IX(i+1,j+1)];
+					//console.log("CLICK " + IX(i,j) + " " + d00 + "," + d01 + "," + d10 + "," + d11);
+					gridMesh.geometry.faces[ IX(i,j) ].vertexColors[ 0 ].setRGB( d00, d00, d00 );
+					gridMesh.geometry.faces[ IX(i,j) ].vertexColors[ 1 ].setRGB( d10, d10, d10 );
+					gridMesh.geometry.faces[ IX(i,j) ].vertexColors[ 2 ].setRGB( d11, d11, d11 );
+					gridMesh.geometry.faces[ IX(i,j) ].vertexColors[ 3 ].setRGB( d01, d01, d01 ); 
+				}
+			}
+				gridMesh.geometry.colorsNeedUpdate = true;
+			}
+
+			function get_from_UI ( d, u, v )
+			{
+				var size = (N+2)*(N+2);
+				var i, j;
+
+				for (i=0 ; i<size ; i++ ) {
+					u[i] = v[i] = d[i] = 0.0;
+				}
+
+				//console.log(mouse_down + " " + dens_mode);
+				if ( !mouse_down ) return;
+				//console.log(old_mouse.x + " " + old_mouse.y);
+				i = Math.floor(mouse.x*N+1);
+				j = Math.floor(mouse.y*N+1);
+				
+				if ( i<1 || i>N || j<1 || j>N ) return;
+
+				//console.log(i + " " + j);
+
+				if ( !dens_mode ) {
+					//console.log(IX(i,j));
+					u[IX(i,j)] = force * (mouse.x-old_mouse.x)*window.innerWidth;
+					v[IX(i,j)] = force * (mouse.y-old_mouse.y)*window.innerHeight;
+
+					/*uVectors[IX(i,j)].geometry.vertices[1].x = uVectors[IX(i,j)].geometry.vertices[0].x + u[IX(i,j)];
+					uVectors[IX(i,j)].geometry.vertices[1].y = uVectors[IX(i,j)].geometry.vertices[0].y + v[IX(i,j)];
+					uVectors[IX(i,j)].geometry.verticesNeedUpdate = true; 
+				*/
+				}
+
+				if ( dens_mode ) {
+					d[IX(i,j)] = source;
+
+				}
+
+				old_mouse.x = mouse.x;
+				old_mouse.y = mouse.y;
+
+			}
+
+			function render() {
+				get_from_UI ( dens.last, U.last, V.last );
+				vel_step ( U, V );
+				dens_step ( dens, U.cur, V.cur );
+				draw_density();
+
+				var size = (N+2)*(N+2);
+				var i, j;
+				
+				for (i=0 ; i<size ; i++ ) {
+					uVectors[i].geometry.vertices[1].x = uVectors[i].geometry.vertices[0].x + U.cur[i];
+					uVectors[i].geometry.vertices[1].y = uVectors[i].geometry.vertices[0].y + V.cur[i];
+					uVectors[i].geometry.verticesNeedUpdate = true;
+				}
+
+				renderer.render( scene, camera );
+			}
+
+			function onDocumentMouseMove( event ) {
+				mouse.x = ( event.clientX / window.innerWidth );
+				mouse.y =  - ( event.clientY / window.innerHeight ) + 1;
+				//console.log(mouse);
+			}
+
+			function onDocumentMouseDown( event ) 
+			{
+				old_mouse.x = mouse.x = ( event.clientX / window.innerWidth );
+				old_mouse.y = mouse.y = - ( event.clientY / window.innerHeight ) + 1;
+				
+				mouse_down = true;
+
+				//console.log(mouse_down);
+			}		
+
+			function onDocumentMouseUp( event ) 
+			{
+				mouse_down = false;
+				
+				//render();
+			
+			}		
+
+			function update()
+			{
+				keyboard.update();
+				if ( keyboard.down("left") )
+					dens_mode = !dens_mode;
+				//console.log(dens_mode);
+
+			}
+
+		</script>
+	</body>
+</html>
