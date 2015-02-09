@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>WebGL - 2D Curves</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel=stylesheet href="css/base.css"/>
+</head>
+
+<body>
+
+<script src="js/Detector.js"></script>
+<script src="js/webgl-utils.js"></script>
+<script src="js/shader.js"></script>
+
+<canvas id="canvas" width="400" height="400"></canvas>
+
+<!-- TEXTURE VERTEX SHADER -->
+<script type="x-shader/x-vertex" id="texture-vs">
+attribute vec2 vpos;
+
+varying vec2 point;
+varying vec2 texCoord;
+
+void main()
+{
+	point = vpos*3.0;
+	texCoord.x = (vpos.x+1.0)*0.5;
+	texCoord.y = (vpos.y+1.0)*0.5;
+	gl_Position = vec4(vpos.x, vpos.y, 0, 1);
+}
+</script>
+
+<!-- TEXTURE FRAGMENT SHADER -->
+<script type="x-shader/x-fragment" id="texture-fs">
+precision mediump float;
+
+varying vec2 texCoord;
+varying vec2 point;
+
+uniform sampler2D tex;
+
+void main() {
+	gl_FragColor = texture2D(tex, texCoord);
+}
+</script>
+
+<!-- 2D CURVES FRAGMENT SHADER -->
+<script type="x-shader/x-fragment" id="2dCurves-fs">
+precision mediump float;
+
+uniform float x0,y0;
+uniform vec2 size;
+
+varying vec2 point;
+
+#define Interval vec2
+
+Interval Isqr(Interval x)
+{
+	if (x[0]>=0.0)
+		return Interval(x[0]*x[0],x[1]*x[1]);
+	else if (x[1]<=0.0)
+		return Interval(x[1]*x[1],x[0]*x[0]);
+	else
+		return Interval(0.0,max(x[0]*x[0],x[1]*x[1]));
+}
+
+Interval Icube(Interval x)
+{
+	return Interval(x[0]*x[0]*x[0],x[1]*x[1]*x[1]);
+}
+
+Interval Ineg(Interval x)
+{
+	return Interval(-x[1],-x[0]);
+}
+
+Interval Imul(Interval x, Interval y)
+{
+	float mm=x[0]*y[0];
+	float mM=x[0]*y[1];
+	float Mm=x[1]*y[0];
+	float MM=x[1]*y[1];
+	return vec2(
+		min(min(min(mm,mM),Mm),MM),
+		max(max(max(mm,mM),Mm),MM));
+}
+
+Interval F(float x, float y, float w, float h)
+{
+	Interval X=Interval(x-w,x+w);
+	Interval Y=Interval(y-w,y+w);
+	Interval Y2=Isqr(Y);
+	Interval X3=Icube(X);
+	return Y2+Ineg(X3)+X+h;
+}
+
+void main()
+{
+	float x = point.x;
+	float y = point.y;
+	float w = 1.0/size.x;
+	float h = 1.0/size.y;
+	Interval v = F(x,y,w,h);
+	if (v[0]>0.0)
+		gl_FragColor=vec4(1.0,1.0,1.0,1.0);
+	else if (v[1]<0.0)
+		gl_FragColor=vec4(0.0,0.0,0.0,1.0);
+	else
+		gl_FragColor=vec4(1.0,0.0,0.0,1.0);
+}
+</script>
+
+<script>
+
+if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+// global variables
+var gl;
+var WIDTH = 400, HEIGHT = 400;
+var curvesShader, texShader;
+
+var grid = {
+	src: 0,
+	dst: 1,
+	w: WIDTH,
+	h: HEIGHT,
+	dx: 1.0,
+	t: [],
+	fbo: 0,
+	swap: function() {
+		var tmp = this.src;
+		this.src = this.dst;
+		this.dst = tmp;
+	},
+	print: function() {
+	       console.log("src " + this.src);
+	       console.log("dst " + this.dst);
+	       console.log("size " + this.w + "," + this.h); 
+	       console.log("dx " + this.dx);
+	       console.log("tex " + this.t[0] + " " + this.t[1]);
+	},
+	init: function() {
+		fbo = gl.createFramebuffer();
+	      	gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+
+	      	for (var i = 0; i < 2; ++i) {
+		      	var texture = gl.createTexture();
+			this.t.push(texture);
+		      	
+			gl.bindTexture(gl.TEXTURE_2D, texture);
+
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.w, this.h, 0,
+				      gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+					gl.TEXTURE_2D, this.t[i], 0);
+
+			checkFB(fbo);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+		  }
+	},
+	enable: function() {
+		gl.viewport(0, 0, this.w, this.h);
+		
+		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+		
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+				gl.TEXTURE_2D, this.t[this.dst], 0);
+		
+	},
+	disable: function(){
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	}
+};
+
+init();
+render();
+
+function init() {
+	// Get A WebGL context
+	var canvas = document.getElementById("canvas");
+	gl = getWebGLContext(canvas);
+	if (!gl)
+		return;
+	
+	// SHADER PROGRAMS -------------------------------------------------------
+	curvesShader = new SHADER.Shader(gl, "texture-vs", "2dCurves-fs");
+	curvesShader.start(gl);
+		curvesShader.setUniform2f(gl, "size", [WIDTH,HEIGHT]);
+	curvesShader.stop(gl);
+	texShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
+	//------------------------------------------------------------------------
+	
+	// TEXTURE BUFFER DATA ---------------------------------------------------
+	var positionLocation = texShader.getLocation(gl, "vpos");
+	var positionBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+	gl.enableVertexAttribArray(positionLocation);
+	gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+				-1.0, -1.0,
+				3.0, -1.0,
+				-1.0, 3.0]), gl.STATIC_DRAW);
+	//------------------------------------------------------------------------
+	
+	grid.init();
+	grid.print();
+}
+
+function computeCurves() {
+	grid.enable();
+	curvesShader.start(gl);
+		gl.drawArrays(gl.TRIANGLES, 0, 3);
+	curvesShader.stop(gl);
+	grid.disable();
+}
+
+function render() {
+	computeCurves();
+	gl.viewport(0, 0, WIDTH, HEIGHT);
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, grid.t[grid.dst]);
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+	texShader.start(gl);
+		gl.drawArrays(gl.TRIANGLES, 0, 3);
+	texShader.stop(gl);
+}
+
+function checkFB(framebuffer) {
+	if (!gl.isFramebuffer(framebuffer))
+		throw("Invalid framebuffer");
+	var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    	switch (status) {
+		case gl.FRAMEBUFFER_COMPLETE: break;
+		case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+			throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
+			break;
+		case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+		        throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
+		        break;
+		case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+		        throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_DIMENSIONS");
+		        break;
+		case gl.FRAMEBUFFER_UNSUPPORTED:
+		        throw("Incomplete framebuffer: FRAMEBUFFER_UNSUPPORTED");
+		        break;
+		default: throw("Incomplete framebuffer: " + status);
+	}
+}
+
+</script>
+
+</body>
+</html>
