@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>Simple Cloth Simulation - Based on http://web.archive.org/web/20070610223835/http://www.teknikus.dk/tj/gdc2001.htm</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel=stylesheet href="css/base.css"/>
+</head>
+<body>
+
+<script src="js/Three.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/Stats.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/THREEx.KeyboardState.js"></script>
+<script src="js/THREEx.FullScreen.js"></script>
+<script src="js/THREEx.WindowResize.js"></script>
+
+<script src="js/Label.js"></script>
+<script src="js/Helpers.js"></script>
+<script src="js/Cloth.js"></script>
+
+<script type='text/javascript' src='js/DAT.GUI.min.js'></script>
+
+<!-- Custom shaders for particle effects -->
+<script type="x-shader/x-vertex" id="vertexshader">
+attribute vec3 customColor;
+varying vec3 vColor;
+void main() 
+{
+	vColor = customColor; // set color associated to vertex; use later in fragment shader
+	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+	// option (1): draw particles at constant size on screen
+	// gl_PointSize = size;
+    // option (2): scale particles as objects in 3D space
+	gl_PointSize = 10.0 * ( 300.0 / length( mvPosition.xyz ) );
+	gl_Position = projectionMatrix * mvPosition;
+}
+</script>
+
+<script type="x-shader/x-fragment" id="fragmentshader">
+uniform sampler2D texture;
+varying vec3 vColor; // colors associated to vertices; assigned by vertex shader
+void main() 
+{
+	// calculates a color for the particle
+	gl_FragColor = vec4( vColor, 1.0 );
+	// sets particle texture to desired color
+	gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+}
+</script>
+<!-- end of custom shaders -->
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+
+<div style='height: 0px;width:0px; overflow:hidden;'><input type="file" id="files" name="file" class="button"/></div>
+
+<script>
+
+// MAIN
+
+// standard global variables
+var container, scene, camera, renderer, controls;
+var keyboard = new THREEx.KeyboardState();
+var clock = new THREE.Clock();
+
+// custom global variables
+var cloth, rigidBodies = [];
+var parameters;
+var gui;
+
+
+init();
+animate();		
+
+// FUNCTIONS 		
+function init() 
+{
+	// SCENE
+	scene = new THREE.Scene();
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	scene.add(camera);
+	camera.position.set(0,150,400);
+	camera.lookAt(scene.position);	
+	// RENDERER
+	if ( Detector.webgl )
+		renderer = new THREE.WebGLRenderer( {antialias:true} );
+	else
+		renderer = new THREE.CanvasRenderer(); 
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	container = document.getElementById( 'ThreeJS' );
+	container.appendChild( renderer.domElement );
+	// EVENTS
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+	// CONTROLS
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+	////////////
+	// CUSTOM //
+	////////////
+	
+	HELPERS.cartesianGrid(scene);	
+	
+	gui = new dat.GUI();
+	
+	parameters = 
+	{
+		file: function() { document.getElementById("files").click(); }
+	};
+		
+	gui.add( parameters, 'file' ).name("Open *.ply, *.obj or *.vtk files");
+
+	gui.open();
+
+	cloth = new CLOTH.Cloth(scene,20,20,10);
+	cloth.addPivot(0,0,new THREE.Vector3(0,150,0));
+	cloth.addPivot(cloth.NW-1, 0, new THREE.Vector3(0,150,(cloth.NH-1)*cloth.L));
+	cloth.addPivot(0,cloth.NH-1, new THREE.Vector3((cloth.NW-1)*cloth.L,150,0));
+	cloth.addPivot(cloth.NW-1, cloth.NH-1, new THREE.Vector3((cloth.NW-1)*cloth.L,150,(cloth.NH-1)*cloth.L));
+
+	//for(var i = 0; i < 1; i++)
+	//	cloth.update();
+
+	// FUN STUFF
+	
+	var rigidSphere = {
+		init: function(){
+			var geometry = new THREE.SphereGeometry( 20, 32, 32 );
+			var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+			this.sphere = new THREE.Mesh( geometry, material );	
+			this.simulationStep = 0;
+			scene.add( this.sphere );
+		},
+		move: function(){
+			var t = this.simulationStep/70;
+			this.simulationStep++;
+
+			this.sphere.position = new THREE.Vector3(
+				20.0 * Math.cos(2.0 * t) * (3.0 + Math.cos(3.0 * t)),
+				20.0 * Math.sin(2.0 * t) * (3.0 + Math.cos(3.0 * t)),
+				50.0 * Math.sin(3.0 * t) );
+			this.sphere.position.add(new THREE.Vector3(100,100,100));
+		},
+		particleCollision: function(particle){
+			var delta = particle.clone();
+			delta.sub(this.sphere.position);
+			if(delta.dot(delta) <= this.sphere.geometry.radius*this.sphere.geometry.radius){
+				delta.setLength(this.sphere.geometry.radius);
+				delta.add(this.sphere.position);
+				return delta;
+			}
+			return particle;
+		}
+	};
+
+	rigidSphere.init();
+	rigidBodies.push(rigidSphere);
+	//for(var i = 0; i < 1; i++)
+	//	cloth.update(rigidBodies);
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+
+function update()
+{	
+	controls.update();
+	
+	rigidBodies[0].move();
+	cloth.update(rigidBodies);
+}
+
+function render() 
+{
+	renderer.render( scene, camera );
+}
+
+</script>
+
+</body>
+</html>

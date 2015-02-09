@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>Mocap</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel=stylesheet href="css/base.css"/>
+</head>
+<body>
+
+<div id="infobutton">
+			<a href="javascript:toggleInfo()"><img src="images/i.png" border="0"></a>
+		</div>
+		<div id="info">
+				<B>Motion Capture - WebGL(html5)</B><BR>
+				<P>Loading some raw motion capture data(just points).<BR>And drawing the points as spheres, meet Mr Sphere-man.<BR><BR>
+				Some different test-files:<BR>
+				<a href="javascript:loadFile(0)">Figure Swagger 1</a><BR>
+				<a href="javascript:loadFile(1)">Figure HandSpring 1</a><BR>
+				<a href="javascript:loadFile(2)">Figure Quickwalk</a><BR>
+				<a href="javascript:loadFile(3)">Figure Run 1</a><BR>
+				<a href="javascript:loadFile(4)">Figure Sprint</a><BR>
+				<a href="javascript:loadFile(5)">Figure "dogwalk"</a><BR>
+				</P>
+				Done using <a href="https://github.com/mrdoob/three.js" target="_blank">three.js</a>.
+				<P><B>Note.</B> You need a modern browser that supports WebGL for this to run the way it is intended.<BR>
+				For example. <a href="http://www.google.com/landing/chrome/beta/" target="_blank">Google Chrome 9+</a> or <a href="http://www.mozilla.com/firefox/beta/" target="_blank">Firefox 4+</a>.</P>
+				<font color="#777777">(C) OutsideOfSociety 2010.
+		</div>
+
+<script type="text/javascript" src="js/info.js"></script>		
+<script src="js/Three.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/Stats.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/THREEx.KeyboardState.js"></script>
+<script src="js/THREEx.FullScreen.js"></script>
+<script src="js/THREEx.WindowResize.js"></script>
+
+<script type='text/javascript' src='js/DAT.GUI.min.js'></script>
+<script src="js/bvh-read.js"></script>
+
+<script src="js/Label.js"></script>
+<script src="js/Helpers.js"></script>
+<script src="js/Cloth.js"></script>
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+
+<div style='height: 0px;width:0px; overflow:hidden;'><input type="file" id="files" name="file" class="button"/></div>
+
+<!-- Custom shaders for particle effects -->
+<script type="x-shader/x-vertex" id="vertexshader">
+attribute vec3 customColor;
+varying vec3 vColor;
+void main() 
+{
+	vColor = customColor; // set color associated to vertex; use later in fragment shader
+	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+	// option (1): draw particles at constant size on screen
+	// gl_PointSize = size;
+    // option (2): scale particles as objects in 3D space
+	gl_PointSize = 10.0 * ( 300.0 / length( mvPosition.xyz ) );
+	gl_Position = projectionMatrix * mvPosition;
+}
+</script>
+
+<script type="x-shader/x-fragment" id="fragmentshader">
+uniform sampler2D texture;
+varying vec3 vColor; // colors associated to vertices; assigned by vertex shader
+void main() 
+{
+	// calculates a color for the particle
+	gl_FragColor = vec4( vColor, 1.0 );
+	// sets particle texture to desired color
+	gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+}
+</script>
+<!-- end of custom shaders -->
+
+<script>
+
+// MAIN
+
+// standard global variables
+var container, scene, camera, renderer, controls;
+var keyboard = new THREEx.KeyboardState();
+var clock = new THREE.Clock();
+
+// custom global variables
+var cloths = [], rigidBodies = [];
+var parameters;
+var gui;
+var play = false;
+
+init();
+animate();		
+
+// FUNCTIONS 		
+function init() 
+{
+	// SCENE
+	scene = new THREE.Scene();
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	scene.add(camera);
+	camera.position.set(400,400,400);
+	camera.lookAt(scene.position);	
+	// RENDERER
+	if ( Detector.webgl )
+		renderer = new THREE.WebGLRenderer( {antialias:true} );
+	else
+		renderer = new THREE.CanvasRenderer(); 
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	container = document.getElementById( 'ThreeJS' );
+	container.appendChild( renderer.domElement );
+	// EVENTS
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+	// CONTROLS
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+	document.getElementById('files').addEventListener('change', function(evt){ BVH.readText(evt.target); }, false);
+	BVH.init(scene);
+	BVH.ready = function(){
+		play = true;
+		console.log(BVH.Bvh.root);
+		rigidBodies.push(BVH.Bvh);
+		//cloth.update(rigidBodies);
+	};
+
+	////////////
+	// CUSTOM //
+	////////////
+	
+	HELPERS.cartesianGrid(scene);
+
+	gui = new dat.GUI();
+	
+	parameters = 
+	{
+		file: function() { document.getElementById("files").click();  }
+	};
+		
+	gui.add( parameters, 'file' ).name("Load *.bvh files");
+
+	gui.open();
+
+	//CLOTH
+	cloths[0] = new CLOTH.Cloth(scene,26,20,5);
+
+	for(var i = 0; i < cloths[0].NH; i++){
+		cloths[0].addPivot(0,i, new THREE.Vector3(i*cloths[0].L,200,100));	
+	}
+
+	cloths[1] = new CLOTH.Cloth(scene,26,20,5);
+
+	for(var i = 0; i < cloths[1].NH; i++){
+		cloths[1].addPivot(0,i, new THREE.Vector3(i*cloths[1].L + cloths[0].L*(cloths[0].NH-1),200,100));	
+	}
+
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+	if(play){
+		BVH.animate();
+		//rigidBodies[0].animate();
+		cloths[0].update(rigidBodies);
+		cloths[1].update(rigidBodies);
+	}
+	else{
+	//if(!play) 
+		cloths[0].update([]);
+		cloths[1].update([]);
+	}
+	
+}
+
+function update()
+{	
+	controls.update();
+}
+
+function render() 
+{
+	renderer.render( scene, camera );
+}
+
+</script>
+
+</body>
+</html>
