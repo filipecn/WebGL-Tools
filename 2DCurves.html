@@ -9,9 +9,14 @@
 
 <body>
 
+<input type="text" id="eText" value="y^2 - x^3 + x + a">
+<button onclick="solve()">Draw!</button>
+
 <script src="js/Detector.js"></script>
 <script src="js/webgl-utils.js"></script>
 <script src="js/shader.js"></script>
+<script src="js/math.js"></script>
+<script src="js/iaparser.js"></script>
 
 <canvas id="canvas" width="400" height="400"></canvas>
 
@@ -44,6 +49,71 @@ void main() {
 	gl_FragColor = texture2D(tex, texCoord);
 }
 </script>
+
+<!-- IA FRAGMENT SHADER HEADER -->
+<script type="x-shader/x-fragment" id="iaHeader-fs">
+precision mediump float;
+
+uniform float x0,y0;
+uniform vec2 size;
+
+varying vec2 point;
+
+#define Interval vec2
+
+Interval Isqr(Interval x)
+{
+	if (x[0]>=0.0)
+		return Interval(x[0]*x[0],x[1]*x[1]);
+	else if (x[1]<=0.0)
+		return Interval(x[1]*x[1],x[0]*x[0]);
+	else
+		return Interval(0.0,max(x[0]*x[0],x[1]*x[1]));
+}
+
+Interval Icube(Interval x)
+{
+	return Interval(x[0]*x[0]*x[0],x[1]*x[1]*x[1]);
+}
+
+Interval Ineg(Interval x)
+{
+	return Interval(-x[1],-x[0]);
+}
+
+Interval Imul(Interval x, Interval y)
+{
+	float mm=x[0]*y[0];
+	float mM=x[0]*y[1];
+	float Mm=x[1]*y[0];
+	float MM=x[1]*y[1];
+	return vec2(
+		min(min(min(mm,mM),Mm),MM),
+		max(max(max(mm,mM),Mm),MM));
+}
+
+</script>
+
+
+<!-- IA FRAGMENT SHADER HEADER -->
+<script type="x-shader/x-fragment" id="iaFooter-fs">
+
+void main()
+{
+	float x = point.x;
+	float y = point.y;
+	float w = 1.0/size.x;
+	float h = 1.0/size.y;
+	Interval v = F(x,y,w,h);
+	if (v[0]>0.0)
+		gl_FragColor=vec4(1.0,1.0,1.0,1.0);
+	else if (v[1]<0.0)
+		gl_FragColor=vec4(0.0,0.0,0.0,1.0);
+	else
+		gl_FragColor=vec4(1.0,0.0,0.0,1.0);
+}
+</script>
+
 
 <!-- 2D CURVES FRAGMENT SHADER -->
 <script type="x-shader/x-fragment" id="2dCurves-fs">
@@ -114,6 +184,19 @@ void main()
 
 <script>
 
+//IAPARSER.parse('3x * (y / 4)^2');
+IAPARSER.parse('x2');
+// *
+// 3
+// *
+// x
+// ^            R1
+// / R0
+// y
+// 4
+//   2
+
+
 if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 // global variables
@@ -183,6 +266,17 @@ var grid = {
 init();
 render();
 
+function solve() {
+	var fs = 	document.getElementById("iaHeader-fs").text +
+			"\n" + 
+			IAPARSER.parse(document.getElementById("eText").value) +
+			document.getElementById("iaFooter-fs").text;
+	
+	console.log(fs);
+	curvesShader.loadText(gl, document.getElementById("texture-vs").text, fs);
+	render();
+}
+
 function init() {
 	// Get A WebGL context
 	var canvas = document.getElementById("canvas");
@@ -211,7 +305,7 @@ function init() {
 	//------------------------------------------------------------------------
 	
 	grid.init();
-	grid.print();
+	//grid.print();
 }
 
 function computeCurves() {

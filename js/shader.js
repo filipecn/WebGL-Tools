@@ -33,11 +33,33 @@ SHADER.fromScript = function(gl, id){
     	return shader;
 }
 
+SHADER.fromSource = function(gl, shaderSource, shaderType){
+    	var shader = gl.createShader(shaderType);
+    	gl.shaderSource(shader, shaderSource);
+    	gl.compileShader(shader);
+    	
+	var compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+    	if (!compiled) {
+    		var error = gl.getShaderInfoLog(shader);
+    		throw("*** Error compiling shader '" + shader + "':" + error);
+    		gl.deleteShader(shader);
+    		return null;
+    	}
+    
+    	return shader;
+}
+
 SHADER.Shader = function(gl, vs_source, fs_source){
 	var vertexShader = SHADER.fromScript(gl, vs_source);
 	var fragmentShader = SHADER.fromScript(gl, fs_source);
 	this.program = createProgram(gl, [vertexShader, fragmentShader]);
 };
+
+SHADER.Shader.prototype.loadText = function(gl, vs_source, fs_source){
+	var vertexShader = SHADER.fromSource(gl, vs_source, gl.VERTEX_SHADER);
+	var fragmentShader = SHADER.fromSource(gl, fs_source, gl.FRAGMENT_SHADER);
+	this.program = createProgram(gl, [vertexShader, fragmentShader]);
+}
 
 SHADER.Shader.prototype.getLocation = function(gl, attr){
 	return gl.getAttribLocation(this.program, attr);
