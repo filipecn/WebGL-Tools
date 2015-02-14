@@ -9,7 +9,9 @@
 
 <body>
 
-<input type="text" id="eText" value="y^2 - x^3 + x + a">
+<font color="blue">^2,^3,(),+,-,*</font>
+
+<input type="text" id="eText" value="y^2 - x^3 + x + 0.0025">
 <button onclick="solve()">Draw!</button>
 
 <script src="js/Detector.js"></script>
@@ -91,6 +93,15 @@ Interval Imul(Interval x, Interval y)
 		min(min(min(mm,mM),Mm),MM),
 		max(max(max(mm,mM),Mm),MM));
 }
+
+Interval Ipow(Interval x, int p){
+	if(p == 2)
+		return Isqr(x);
+	if(p == 3)
+		return Icube(x);
+	return x;
+}
+
 
 </script>
 
@@ -184,19 +195,6 @@ void main()
 
 <script>
 
-//IAPARSER.parse('3x * (y / 4)^2');
-IAPARSER.parse('x2');
-// *
-// 3
-// *
-// x
-// ^            R1
-// / R0
-// y
-// 4
-//   2
-
-
 if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 // global variables
@@ -272,8 +270,11 @@ function solve() {
 			IAPARSER.parse(document.getElementById("eText").value) +
 			document.getElementById("iaFooter-fs").text;
 	
-	console.log(fs);
+	//console.log(fs);
 	curvesShader.loadText(gl, document.getElementById("texture-vs").text, fs);
+	curvesShader.start(gl);
+		curvesShader.setUniform2f(gl, "size", [WIDTH,HEIGHT]);
+	curvesShader.stop(gl);
 	render();
 }
 
