@@ -77,3 +77,9 @@ SHADER.Shader.prototype.setUniform2f = function(gl, name, v){
 	var l = gl.getUniformLocation(this.program, name);
 	gl.uniform2f(l, v[0], v[1]);
 };
+
+
+SHADER.Shader.prototype.setUniform1f = function(gl, name, v){
+	var l = gl.getUniformLocation(this.program, name);
+	gl.uniform1f(l, v);
+};

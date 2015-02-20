@@ -1,40 +1,90 @@
 <!doctype html>
 <html lang="en">
 <head>
-	<title>WebGL - 2D Curves</title>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-	<link rel=stylesheet href="css/base.css"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>s</title>
+<link rel="icon" href="images/favicon.gif" type="image/x-icon"/>
+<link rel="shortcut icon" href="images/favicon.gif" type="image/x-icon"/> 
+<link rel="stylesheet" type="text/css" href="css/styles.css"/>
 </head>
-
 <body>
-
-<font color="blue">^2,^3,(),+,-,*</font>
-
-<input type="text" id="eText" value="y^2 - x^3 + x + 0.0025">
-<button onclick="solve()">Draw!</button>
+   <div class="bg">
+    <!--start container-->
+    <div id="container">
+    <!--start header-->
+    <header>
+      <!--start logo-->
+      <h1></h1>
+      <h3></h3>
+      <h1>GLSL Implicit Curves</h1>
+      <!--end logo-->
+      <!--start menu -->
+  	   <nav>
+         <ul>
+         <li><h3></h3><input type="text" id="eText" value="y^2 - x^3 + x + 0.0025"><h3></h3></li>
+         <li><h3></h3><button onclick="solve()">Draw!</button><h3></h3></li>
+         <li><h3></h3><h4>Last update: 19.02.2015 </h4><h3></h3></li>
+         </ul>
+      </nav>
+  	   <!--end menu-->
+      <!--end header-->
+	</header>
+   <!--start intro-->
+   <div class="holder_content">
+   <div style=";width:auto;height:400px;background:#F9EECF;border:1px dotted black;text-align:center">
+            <canvas id="canvas" width="100%" height="100%"></canvas>
+          </div>
+   </div>
+   <!--end intro-->
+   <!--start holder-->
+   <div class="holder_content">
+      <section class="group4">
+         <h3>Usage</h3>
+         <font color="blue"><h3>^2,^3,(),+,-,*.</h3></font>
+         <p> - use only x and y </p>
+         <p> - use only ^3 or ^2: x^3, y^2, (x+2)^3 </p>
+         <p> - xx don't work, use x*x instead </p>
+         <p> - x2 don't work, use x^2 instead </p>
+         <h4></h4>
+         <h3>Log</h3>
+         <p> - pan (mouse drag) and zoom (wheel) </p>
+         <p> - added ^2 and ^3 </p>
+       </section>
+   </div>
+   <!--end holder-->
+   </div>
+   <!--end container-->
+   <!--start footer-->
+   <footer>
+      <div class="container">  
+         <div id="FooterTwo"> CSS by <a href="http://www.marijazaric.com">marija zaric - creative simplicity</a> © 2011 Minimalism </div>
+         <div id="FooterTree"></div> 
+      </div>
+   </footer>
+   <!--end footer-->
+   </div>
+   <!--end bg-->
+   <!-- Free template distributed by http://freehtml5templates.com -->
+  </body>
 
 <script src="js/Detector.js"></script>
-<script src="js/webgl-utils.js"></script>
-<script src="js/shader.js"></script>
-<script src="js/math.js"></script>
-<script src="js/iaparser.js"></script>
+          <script src="js/webgl-utils.js"></script>
+          <script src="js/shader.js"></script>
+          <script src="js/math.js"></script>
+          <script src="js/iaparser.js"></script>
 
-<canvas id="canvas" width="400" height="400"></canvas>
-
-<!-- TEXTURE VERTEX SHADER -->
+  <!-- TEXTURE VERTEX SHADER -->
 <script type="x-shader/x-vertex" id="texture-vs">
 attribute vec2 vpos;
 
-varying vec2 point;
 varying vec2 texCoord;
 
 void main()
 {
-	point = vpos*3.0;
-	texCoord.x = (vpos.x+1.0)*0.5;
-	texCoord.y = (vpos.y+1.0)*0.5;
-	gl_Position = vec4(vpos.x, vpos.y, 0, 1);
+  texCoord.x = (vpos.x+1.0)*0.5;
+  texCoord.y = (vpos.y+1.0)*0.5;
+  gl_Position = vec4(vpos.x, vpos.y, 0, 1);
 }
 </script>
 
@@ -43,14 +93,34 @@ void main()
 precision mediump float;
 
 varying vec2 texCoord;
-varying vec2 point;
 
 uniform sampler2D tex;
 
 void main() {
-	gl_FragColor = texture2D(tex, texCoord);
+  gl_FragColor = texture2D(tex, texCoord);
 }
 </script>
+
+<!-- IA VERTEX SHADER -->
+<script type="x-shader/x-vertex" id="2dCurves-vs">
+attribute vec2 vpos;
+
+varying vec2 point;
+varying vec2 texCoord;
+
+uniform vec2 offset;
+uniform vec2 ratio;
+uniform float zoom;
+
+void main()
+{
+  point = vpos*ratio*zoom + offset;
+  texCoord.x = (vpos.x+1.0)*0.5;
+  texCoord.y = (vpos.y+1.0)*0.5;
+  gl_Position = vec4(vpos.x, vpos.y, 0, 1);
+}
+</script>
+
 
 <!-- IA FRAGMENT SHADER HEADER -->
 <script type="x-shader/x-fragment" id="iaHeader-fs">
@@ -65,41 +135,41 @@ varying vec2 point;
 
 Interval Isqr(Interval x)
 {
-	if (x[0]>=0.0)
-		return Interval(x[0]*x[0],x[1]*x[1]);
-	else if (x[1]<=0.0)
-		return Interval(x[1]*x[1],x[0]*x[0]);
-	else
-		return Interval(0.0,max(x[0]*x[0],x[1]*x[1]));
+  if (x[0]>=0.0)
+    return Interval(x[0]*x[0],x[1]*x[1]);
+  else if (x[1]<=0.0)
+    return Interval(x[1]*x[1],x[0]*x[0]);
+  else
+    return Interval(0.0,max(x[0]*x[0],x[1]*x[1]));
 }
 
 Interval Icube(Interval x)
 {
-	return Interval(x[0]*x[0]*x[0],x[1]*x[1]*x[1]);
+  return Interval(x[0]*x[0]*x[0],x[1]*x[1]*x[1]);
 }
 
 Interval Ineg(Interval x)
 {
-	return Interval(-x[1],-x[0]);
+  return Interval(-x[1],-x[0]);
 }
 
 Interval Imul(Interval x, Interval y)
 {
-	float mm=x[0]*y[0];
-	float mM=x[0]*y[1];
-	float Mm=x[1]*y[0];
-	float MM=x[1]*y[1];
-	return vec2(
-		min(min(min(mm,mM),Mm),MM),
-		max(max(max(mm,mM),Mm),MM));
+  float mm=x[0]*y[0];
+  float mM=x[0]*y[1];
+  float Mm=x[1]*y[0];
+  float MM=x[1]*y[1];
+  return vec2(
+    min(min(min(mm,mM),Mm),MM),
+    max(max(max(mm,mM),Mm),MM));
 }
 
 Interval Ipow(Interval x, int p){
-	if(p == 2)
-		return Isqr(x);
-	if(p == 3)
-		return Icube(x);
-	return x;
+  if(p == 2)
+    return Isqr(x);
+  if(p == 3)
+    return Icube(x);
+  return x;
 }
 
 
@@ -111,85 +181,17 @@ Interval Ipow(Interval x, int p){
 
 void main()
 {
-	float x = point.x;
-	float y = point.y;
-	float w = 1.0/size.x;
-	float h = 1.0/size.y;
-	Interval v = F(x,y,w,h);
-	if (v[0]>0.0)
-		gl_FragColor=vec4(1.0,1.0,1.0,1.0);
-	else if (v[1]<0.0)
-		gl_FragColor=vec4(0.0,0.0,0.0,1.0);
-	else
-		gl_FragColor=vec4(1.0,0.0,0.0,1.0);
-}
-</script>
-
-
-<!-- 2D CURVES FRAGMENT SHADER -->
-<script type="x-shader/x-fragment" id="2dCurves-fs">
-precision mediump float;
-
-uniform float x0,y0;
-uniform vec2 size;
-
-varying vec2 point;
-
-#define Interval vec2
-
-Interval Isqr(Interval x)
-{
-	if (x[0]>=0.0)
-		return Interval(x[0]*x[0],x[1]*x[1]);
-	else if (x[1]<=0.0)
-		return Interval(x[1]*x[1],x[0]*x[0]);
-	else
-		return Interval(0.0,max(x[0]*x[0],x[1]*x[1]));
-}
-
-Interval Icube(Interval x)
-{
-	return Interval(x[0]*x[0]*x[0],x[1]*x[1]*x[1]);
-}
-
-Interval Ineg(Interval x)
-{
-	return Interval(-x[1],-x[0]);
-}
-
-Interval Imul(Interval x, Interval y)
-{
-	float mm=x[0]*y[0];
-	float mM=x[0]*y[1];
-	float Mm=x[1]*y[0];
-	float MM=x[1]*y[1];
-	return vec2(
-		min(min(min(mm,mM),Mm),MM),
-		max(max(max(mm,mM),Mm),MM));
-}
-
-Interval F(float x, float y, float w, float h)
-{
-	Interval X=Interval(x-w,x+w);
-	Interval Y=Interval(y-w,y+w);
-	Interval Y2=Isqr(Y);
-	Interval X3=Icube(X);
-	return Y2+Ineg(X3)+X+h;
-}
-
-void main()
-{
-	float x = point.x;
-	float y = point.y;
-	float w = 1.0/size.x;
-	float h = 1.0/size.y;
-	Interval v = F(x,y,w,h);
-	if (v[0]>0.0)
-		gl_FragColor=vec4(1.0,1.0,1.0,1.0);
-	else if (v[1]<0.0)
-		gl_FragColor=vec4(0.0,0.0,0.0,1.0);
-	else
-		gl_FragColor=vec4(1.0,0.0,0.0,1.0);
+  float x = point.x;
+  float y = point.y;
+  float w = 1.0/size.x;
+  float h = 1.0/size.y;
+  Interval v = F(x,y,w,h);
+  if (v[0]>0.0)
+    gl_FragColor=vec4(1.0,1.0,1.0,1.0);
+  else if (v[1]<0.0)
+    gl_FragColor=vec4(0.0,0.0,0.0,1.0);
+  else
+    gl_FragColor=vec4(1.0,0.0,0.0,1.0);
 }
 </script>
 
@@ -197,161 +199,228 @@ void main()
 
 if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
+// mouse interactions
+var mousePos;
+var dragStart;
+var dragging = false;
+var pan = {x:0,y:0};
+var zoom = 1.0;
+
 // global variables
+var canvas;
 var gl;
 var WIDTH = 400, HEIGHT = 400;
 var curvesShader, texShader;
 
 var grid = {
-	src: 0,
-	dst: 1,
-	w: WIDTH,
-	h: HEIGHT,
-	dx: 1.0,
-	t: [],
-	fbo: 0,
-	swap: function() {
-		var tmp = this.src;
-		this.src = this.dst;
-		this.dst = tmp;
-	},
-	print: function() {
-	       console.log("src " + this.src);
-	       console.log("dst " + this.dst);
-	       console.log("size " + this.w + "," + this.h); 
-	       console.log("dx " + this.dx);
-	       console.log("tex " + this.t[0] + " " + this.t[1]);
-	},
-	init: function() {
-		fbo = gl.createFramebuffer();
-	      	gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  src: 0,
+  dst: 1,
+  w: WIDTH,
+  h: HEIGHT,
+  dx: 1.0,
+  t: [],
+  fbo: 0,
+  swap: function() {
+    var tmp = this.src;
+    this.src = this.dst;
+    this.dst = tmp;
+  },
+  print: function() {
+         console.log("src " + this.src);
+         console.log("dst " + this.dst);
+         console.log("size " + this.w + "," + this.h); 
+         console.log("dx " + this.dx);
+         console.log("tex " + this.t[0] + " " + this.t[1]);
+  },
+  init: function(W, H) {
+    this.w = W;
+    this.h = H;
 
-	      	for (var i = 0; i < 2; ++i) {
-		      	var texture = gl.createTexture();
-			this.t.push(texture);
-		      	
-			gl.bindTexture(gl.TEXTURE_2D, texture);
+    fbo = gl.createFramebuffer();
+          gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+          for (var i = 0; i < 2; ++i) {
+            var texture = gl.createTexture();
+      this.t.push(texture);
+            
+      gl.bindTexture(gl.TEXTURE_2D, texture);
 
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.w, this.h, 0,
-				      gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-        		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
-					gl.TEXTURE_2D, this.t[i], 0);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.w, this.h, 0,
+              gl.RGBA, gl.UNSIGNED_BYTE, null);
 
-			checkFB(fbo);
-			gl.clear(gl.COLOR_BUFFER_BIT);
-		  }
-	},
-	enable: function() {
-		gl.viewport(0, 0, this.w, this.h);
-		
-		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-		
-		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
-				gl.TEXTURE_2D, this.t[this.dst], 0);
-		
-	},
-	disable: function(){
-		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	}
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+          gl.TEXTURE_2D, this.t[i], 0);
+
+      checkFB(fbo);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      }
+  },
+  enable: function() {
+    gl.viewport(0, 0, this.w, this.h);
+    
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+        gl.TEXTURE_2D, this.t[this.dst], 0);
+    
+  },
+  disable: function(){
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
 };
 
 init();
 render();
 
 function solve() {
-	var fs = 	document.getElementById("iaHeader-fs").text +
-			"\n" + 
-			IAPARSER.parse(document.getElementById("eText").value) +
-			document.getElementById("iaFooter-fs").text;
-	
-	//console.log(fs);
-	curvesShader.loadText(gl, document.getElementById("texture-vs").text, fs);
-	curvesShader.start(gl);
-		curvesShader.setUniform2f(gl, "size", [WIDTH,HEIGHT]);
-	curvesShader.stop(gl);
-	render();
+  var fs =  document.getElementById("iaHeader-fs").text +
+      "\n" + 
+      IAPARSER.parse(document.getElementById("eText").value) +
+      document.getElementById("iaFooter-fs").text;
+  
+  //console.log(fs);
+  curvesShader.loadText(gl, document.getElementById("2dCurves-vs").text, fs);
+  curvesShader.start(gl);
+    curvesShader.setUniform2f(gl, "size", [WIDTH,HEIGHT]);
+    curvesShader.setUniform2f(gl, "ratio", [1.0,HEIGHT/WIDTH]);
+    curvesShader.setUniform2f(gl, "offset", [pan.x,pan.y]);
+    curvesShader.setUniform1f(gl, "zoom", zoom);
+  curvesShader.stop(gl);
+  render();
 }
 
 function init() {
-	// Get A WebGL context
-	var canvas = document.getElementById("canvas");
-	gl = getWebGLContext(canvas);
-	if (!gl)
-		return;
-	
-	// SHADER PROGRAMS -------------------------------------------------------
-	curvesShader = new SHADER.Shader(gl, "texture-vs", "2dCurves-fs");
-	curvesShader.start(gl);
-		curvesShader.setUniform2f(gl, "size", [WIDTH,HEIGHT]);
-	curvesShader.stop(gl);
-	texShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
-	//------------------------------------------------------------------------
-	
-	// TEXTURE BUFFER DATA ---------------------------------------------------
-	var positionLocation = texShader.getLocation(gl, "vpos");
-	var positionBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-	gl.enableVertexAttribArray(positionLocation);
-	gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-				-1.0, -1.0,
-				3.0, -1.0,
-				-1.0, 3.0]), gl.STATIC_DRAW);
-	//------------------------------------------------------------------------
-	
-	grid.init();
-	//grid.print();
+  // Get A WebGL context
+  canvas = document.getElementById("canvas");
+    // Make it visually fill the positioned parent
+  canvas.style.width ='100%';
+  canvas.style.height='100%';
+  // ...then set the internal size to match
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  
+  HEIGHT = canvas.height;
+  WIDTH = canvas.width;
+  
+  gl = getWebGLContext(canvas);
+  if (!gl)
+    return;
+  // MOUSE INTERACTIONS ----------------------------------------------------
+  canvas.addEventListener('mousemove', function(evt) {
+      if(dragging) {
+        mousePos = getMousePos(canvas, evt);
+        var offset = {};
+        offset.x = ((mouseStart.x - mousePos.x)/WIDTH)*zoom; 
+        offset.y = ((mouseStart.y - mousePos.y)/HEIGHT)*zoom; 
+        curvesShader.start(gl);
+        curvesShader.setUniform2f(gl, "offset", [pan.x + offset.x,pan.y + offset.y]);
+        curvesShader.stop(gl);
+        render();
+        }
+        }, false);
+
+  canvas.addEventListener('mousedown', function(evt) {
+      if(!dragging){
+      dragging = true;
+      mouseStart = getMousePos(canvas, evt);
+      }
+      }, false);
+  
+  canvas.addEventListener('mouseup', function(evt) {
+      if(dragging){
+        pan.x += ((mouseStart.x - mousePos.x)/WIDTH)*zoom; 
+        pan.y += ((mouseStart.y - mousePos.y)/HEIGHT)*zoom; 
+      }
+      dragging = false;
+      }, false);
+  
+  canvas.addEventListener('mousewheel', function(evt) {
+        var wheel = event.wheelDelta/120;
+        zoom += wheel/10;
+        curvesShader.start(gl);
+        curvesShader.setUniform1f(gl, "zoom", zoom);
+        curvesShader.stop(gl);
+        render();
+      }, false);
+  //------------------------------------------------------------------------
+
+
+  // SHADER PROGRAMS -------------------------------------------------------
+  texShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
+  curvesShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
+  //------------------------------------------------------------------------
+  
+  // TEXTURE BUFFER DATA ---------------------------------------------------
+  var positionLocation = texShader.getLocation(gl, "vpos");
+  var positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.enableVertexAttribArray(positionLocation);
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -1.0, -1.0,
+        3.0, -1.0,
+        -1.0, 3.0]), gl.STATIC_DRAW);
+  //------------------------------------------------------------------------
+  
+  grid.init(WIDTH, HEIGHT);
+
+  solve();
 }
 
 function computeCurves() {
-	grid.enable();
-	curvesShader.start(gl);
-		gl.drawArrays(gl.TRIANGLES, 0, 3);
-	curvesShader.stop(gl);
-	grid.disable();
+  grid.enable();
+  curvesShader.start(gl);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  curvesShader.stop(gl);
+  grid.disable();
 }
 
 function render() {
-	computeCurves();
-	gl.viewport(0, 0, WIDTH, HEIGHT);
-	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, grid.t[grid.dst]);
-	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  computeCurves();
+  gl.viewport(0, 0, WIDTH, HEIGHT);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, grid.t[grid.dst]);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-	texShader.start(gl);
-		gl.drawArrays(gl.TRIANGLES, 0, 3);
-	texShader.stop(gl);
+  texShader.start(gl);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  texShader.stop(gl);
 }
 
 function checkFB(framebuffer) {
-	if (!gl.isFramebuffer(framebuffer))
-		throw("Invalid framebuffer");
-	var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-    	switch (status) {
-		case gl.FRAMEBUFFER_COMPLETE: break;
-		case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-			throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
-			break;
-		case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-		        throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
-		        break;
-		case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
-		        throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_DIMENSIONS");
-		        break;
-		case gl.FRAMEBUFFER_UNSUPPORTED:
-		        throw("Incomplete framebuffer: FRAMEBUFFER_UNSUPPORTED");
-		        break;
-		default: throw("Incomplete framebuffer: " + status);
-	}
+  if (!gl.isFramebuffer(framebuffer))
+    throw("Invalid framebuffer");
+  var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      switch (status) {
+    case gl.FRAMEBUFFER_COMPLETE: break;
+    case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+      throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_ATTACHMENT");
+      break;
+    case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+            throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT");
+            break;
+    case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+            throw("Incomplete framebuffer: FRAMEBUFFER_INCOMPLETE_DIMENSIONS");
+            break;
+    case gl.FRAMEBUFFER_UNSUPPORTED:
+            throw("Incomplete framebuffer: FRAMEBUFFER_UNSUPPORTED");
+            break;
+    default: throw("Incomplete framebuffer: " + status);
+  }
+}
+
+function getMousePos(canvas, evt) {
+  var rect = canvas.getBoundingClientRect();
+  return {
+    x: Math.round((evt.clientX-rect.left)/(rect.right-rect.left)*canvas.width),
+    y: Math.round((evt.clientY-rect.bottom)/(-rect.bottom+rect.top)*canvas.height)
+  };
 }
 
 </script>
-
-</body>
 </html>
