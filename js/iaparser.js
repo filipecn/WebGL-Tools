@@ -100,7 +100,10 @@ IAPARSER.parse = function(expression) {
 					case 'ConstantNode': //console.log(node.type, node.value); 
 							     node.name = node.value; break;
 					case 'SymbolNode':   node.name = node.name.toUpperCase();
-							     //console.log(node.type, node.name);  
+							     console.log(node.type, node.name);  
+							     if(node.name != 'X' && node.name != 'Y'){
+							     	node.type == 'ConstantNode';
+							     }
 							     break;
 					default:             //console.log(node.type, node.name);
 				}
@@ -135,4 +138,25 @@ IAPARSER.parse = function(expression) {
 	code += "\treturn R" + (scounter-1) + ";\n}\n";
 	//console.log(code);
 	return header + code;
+};
+
+IAPARSER.parseConstants = function(expression) {
+	var set = new Set();
+
+	var node1 = math.parse(expression);
+
+	node1.traverse(function(node, path, par) {
+				switch (node.type) {
+					case 'SymbolNode':   node.name = node.name.toUpperCase();
+							     console.log(node.type, node.name);  
+							     if(node.name != 'X' && node.name != 'Y'){
+							     	set.add(node.name);
+							     	node.type == 'ConstantNode';
+							     }
+							     break;
+					default:
+				}
+	});
+
+	return set;
 };
