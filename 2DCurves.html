@@ -46,7 +46,7 @@
         <h3>Controls</h3>
         <div id="user">
           <h4></h4>
-          <label "=" for="inputZoom">zoom</label>
+          <label "=" for="inputZoom">viewport scale</label>
           <input id="inputZoom" type="number" value="1" step="0.01">
           <h4></h4>
         </div>
@@ -122,6 +122,7 @@ attribute vec2 vpos;
 
 varying vec2 point;
 varying vec2 texCoord;
+varying vec2 worldSize;
 
 uniform vec2 offset;
 uniform vec2 ratio;
@@ -130,6 +131,7 @@ uniform float zoom;
 void main()
 {
   point = vpos*ratio*zoom + offset;
+  worldSize = vec2(abs(vpos.x*ratio.x*zoom)*2.0,abs(vpos.y*ratio.y*zoom)*2.0);
   texCoord.x = (vpos.x+1.0)*0.5;
   texCoord.y = (vpos.y+1.0)*0.5;
   gl_Position = vec4(vpos.x, vpos.y, 0, 1);
@@ -145,6 +147,7 @@ uniform float x0,y0;
 uniform vec2 size;
 
 varying vec2 point;
+varying vec2 worldSize;
 
 </script>
 
@@ -284,8 +287,8 @@ void main()
 {
   float x = point.x;
   float y = point.y;
-  float w = 0.5/size.x;
-  float h = 0.5/size.y;
+  float w = 0.5*(worldSize.x/size.x);
+  float h = 0.5*(worldSize.y/size.y);
   Interval v = F(x,y,w,h);
   if (v[0]>0.0)
     gl_FragColor=vec4(1.0,1.0,1.0,1.0);
