@@ -50,8 +50,10 @@ SHADER.fromSource = function(gl, shaderSource, shaderType){
 }
 
 SHADER.Shader = function(gl, vs_source, fs_source){
-	var vertexShader = SHADER.fromScript(gl, vs_source);
-	var fragmentShader = SHADER.fromScript(gl, fs_source);
+	//var vertexShader = SHADER.fromScript(gl, vs_source);
+	//var fragmentShader = SHADER.fromScript(gl, fs_source);
+	var vertexShader = SHADER.fromSource(gl, vs_source, gl.VERTEX_SHADER);
+	var fragmentShader = SHADER.fromSource(gl, fs_source, gl.FRAGMENT_SHADER);
 	this.program = createProgram(gl, [vertexShader, fragmentShader]);
 };
 
