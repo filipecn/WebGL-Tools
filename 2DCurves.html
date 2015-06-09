@@ -477,7 +477,7 @@ void main()
 
 <script>
   
-$.get("/ClothSimulation.html", function(data){
+$.get("/WebGL-Tools/ClothSimulation.html", function(data){
   alert("Data: " + data);
 });
 
@@ -486,7 +486,7 @@ function readFile(filename){
   $.get(filename, function(data){console.log("EITA\n"); console.log(data);});
 }
 
-readFile("/2dCurves/taubin.vs");
+readFile("/WebGL-Tools/2dCurves/taubin.vs");
 
 if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
