@@ -55,6 +55,12 @@ SHADER.Shader = function(gl, vs_source, fs_source){
 	this.program = createProgram(gl, [vertexShader, fragmentShader]);
 };
 
+SHADER.ShaderFromFile = function(gl, vs_source, fs_source){
+	var vertexShader = SHADER.fromSource(gl, vs_source, gl.VERTEX_SHADER);
+	var fragmentShader = SHADER.fromSource(gl, fs_source, gl.FRAGMENT_SHADER);
+	this.program = createProgram(gl, [vertexShader, fragmentShader]);
+}
+
 SHADER.Shader.prototype.loadText = function(gl, vs_source, fs_source){
 	var vertexShader = SHADER.fromSource(gl, vs_source, gl.VERTEX_SHADER);
 	var fragmentShader = SHADER.fromSource(gl, fs_source, gl.FRAGMENT_SHADER);

@@ -171,9 +171,14 @@ void main()
   float h = 0.5*(worldSize.y/size.y);
 
   vec2 g = vec2((F(x+w,y) - F(x-w,y))/(2.0*w),(F(x,y+h) - F(x,y-h))/(2.0*h));
+  vec2 p = vec2(x,y);
+  //vec2 g = vec2(dFdx(x),dFdy(y));
   v = v/length(g);
   float W = 2.0*w;
   gl_FragColor = vec4(0.0,0.0,0.0,1.0-smoothstep(-W,W,v));
+  if(v > 0.0)
+    gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+  else gl_FragColor = vec4(0.0,0.0,1.0,1.0);
 }
 </script>
 
@@ -471,6 +476,17 @@ void main()
 </script>
 
 <script>
+  
+$.get("/ClothSimulation.html", function(data){
+  alert("Data: " + data);
+});
+
+function readFile(filename){
+  console.log(filename);
+  $.get(filename, function(data){console.log("EITA\n"); console.log(data);});
+}
+
+readFile("/2dCurves/taubin.vs");
 
 if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
@@ -553,8 +569,8 @@ var grid = {
   }
 };
 
-init();
-render();
+//init();
+//render();
 
 function updateUniforms(e){
   zoom = document.getElementById('inputZoom').value;
@@ -583,7 +599,8 @@ function updateUniforms(e){
 
 function solve() {
 
-  var fs =  document.getElementById("iaHeader-fs").text + "\n";
+  //var fs =  document.getElementById("iaHeader-fs").text + "\n";
+  var fs = readFile("2dCurves/iaHeader.fs") + "\n";
 
   constants = IAPARSER.parseConstants(document.getElementById("eText").value);
   constants.forEach(function(value) {
@@ -594,12 +611,17 @@ function solve() {
 
   console.log(constants.size);
   
-  fs += document.getElementById("ia-fs").text + "\n" + 
+//  fs += document.getElementById("ia-fs").text + "\n" + 
+//      IAPARSER.parse(document.getElementById("eText").value) +
+//      document.getElementById("iaFooter-fs").text;
+
+  fs += readFile("2dCurves/ia.fs") + "\n" + 
       IAPARSER.parse(document.getElementById("eText").value) +
-      document.getElementById("iaFooter-fs").text;
-  
+      readFile("2dCurves/iaFooter.fs");
+        
   console.log(fs);
-  curvesShader.loadText(gl, document.getElementById("2dCurves-vs").text, fs);
+//  curvesShader.loadText(gl, document.getElementById("2dCurves-vs").text, fs);
+  curvesShader.loadText(gl, readFile("2dCurves/2dCurves.vs"), fs);
   curvesShader.start(gl);
     curvesShader.setUniform2f(gl, "size", [WIDTH,HEIGHT]);
     curvesShader.setUniform2f(gl, "ratio", [1.0,HEIGHT/WIDTH]);
@@ -637,17 +659,20 @@ function solve() {
 }
 
 function solveFloat() {
-  var fs =  document.getElementById("taubinHeader-fs").text + "\n";
+  //var fs =  document.getElementById("taubinHeader-fs").text + "\n";
+  var fs =  readFile("2dCurves/taubinHeader.fs").text + "\n";
 
   constants.forEach(function(value) {
       fs += "uniform float " + value + ";\n";
   });
   
   fs += FPARSER.parse(document.getElementById("eText").value) +
-      document.getElementById("taubinFooter-fs").text;
+  //    document.getElementById("taubinFooter-fs").text;
+      readFile("2dCurves/taubinFooter.fs");
   
   console.log(fs);
-  taubinShader.loadText(gl, document.getElementById("taubin-vs").text, fs);
+//  taubinShader.loadText(gl, document.getElementById("taubin-vs").text, fs);
+  taubinShader.loadText(gl, readFile("2dCurves/taubin.vs"), fs);
   taubinShader.start(gl);
     taubinShader.setUniform2f(gl, "size", [WIDTH,HEIGHT]);
     taubinShader.setUniform2f(gl, "ratio", [1.0,HEIGHT/WIDTH]);
@@ -730,10 +755,14 @@ function init() {
 
 
   // SHADER PROGRAMS -------------------------------------------------------
-  texShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
-  curvesShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
-  taubinShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
-  fxaaShader = new SHADER.Shader(gl, "fxaa-vs", "fxaa-fs");
+  //texShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
+  //curvesShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
+  //taubinShader = new SHADER.Shader(gl, "texture-vs", "texture-fs");
+  //fxaaShader = new SHADER.Shader(gl, "fxaa-vs", "fxaa-fs");
+  texShader = new SHADER.ShaderFromFile(gl, readFile("2dCruves/texture-vs"), readFile("2dCruves/texture-fs"));
+  curvesShader = new SHADER.ShaderFromFile(gl, readFile("2dCruves/texture-vs"), readFile("2dCruves/texture-fs"));
+  taubinShader = new SHADER.ShaderFromFile(gl, readFile("2dCruves/texture-vs"), readFile("2dCruves/texture-fs"));
+  fxaaShader = new SHADER.ShaderFromFile(gl, readFile("2dCruves/fxaa-vs"), readFile("2dCruves/fxaa-fs"));
   fxaaShader.start(gl);
     fxaaShader.setUniform1f(gl, "FXAA_SPAN_MAX", 8.0);
     fxaaShader.setUniform1f(gl, "FXAA_REDUCE_MUL", 1.0/8.0);
