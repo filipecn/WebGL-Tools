@@ -39,7 +39,17 @@ FPARSER.sub = function(op1, op2, ccounter, scounter) {
 }
 
 FPARSER.pow = function(op1, op2, ccounter, scounter) {
-	return "\tfloat F" + scounter++ + " = pow(" + op1.name + ", " + op2.name + ".0);\n";
+	var line = "\tfloat F" + scounter++ + " = ";
+	if(op2.name == '0')
+		line += '1.0;\n';
+	else {
+		line += op1.name;
+		for(var i = 1; i < parseInt(op2.name); i++)
+			line += "*" + op1.name;
+		line += ";\n";
+	}
+	return line;
+	//return "\tfloat F" + scounter++ + " = pow(" + op1.name + ", " + op2.name + ".0);\n";
 }
 
 FPARSER.mount = function(op, op1, op2, ccounter, scounter) {
@@ -74,7 +84,7 @@ FPARSER.parse = function(expression) {
 					case 'ConstantNode': //console.log(node.type, node.value); 
 							     node.name = node.value; break;
 					case 'SymbolNode':   node.name = node.name.toUpperCase();
-							     console.log(node.type, node.name);  
+							     //console.log(node.type, node.name);  
 							     if(node.name != 'X' && node.name != 'Y'){
 							     	node.type == 'ConstantNode';
 							     }
@@ -122,7 +132,7 @@ FPARSER.parseConstants = function(expression) {
 	node1.traverse(function(node, path, par) {
 				switch (node.type) {
 					case 'SymbolNode':   node.name = node.name.toUpperCase();
-							     console.log(node.type, node.name);  
+							     //console.log(node.type, node.name);  
 							     if(node.name != 'X' && node.name != 'Y'){
 							     	set.add(node.name);
 							     	node.type == 'ConstantNode';

@@ -1,4 +1,5 @@
-precision mediump float;
+//precision mediump float;
+precision highp float;
 
 uniform vec2 size;
 

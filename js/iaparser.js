@@ -100,7 +100,7 @@ IAPARSER.parse = function(expression) {
 					case 'ConstantNode': //console.log(node.type, node.value); 
 							     node.name = node.value; break;
 					case 'SymbolNode':   node.name = node.name.toUpperCase();
-							     console.log(node.type, node.name);  
+							     //console.log(node.type, node.name);  
 							     if(node.name != 'X' && node.name != 'Y'){
 							     	node.type == 'ConstantNode';
 							     }
@@ -148,7 +148,7 @@ IAPARSER.parseConstants = function(expression) {
 	node1.traverse(function(node, path, par) {
 				switch (node.type) {
 					case 'SymbolNode':   node.name = node.name.toUpperCase();
-							     console.log(node.type, node.name);  
+							     //console.log(node.type, node.name);  
 							     if(node.name != 'X' && node.name != 'Y'){
 							     	set.add(node.name);
 							     	node.type == 'ConstantNode';
