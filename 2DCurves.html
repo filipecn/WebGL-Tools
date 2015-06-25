@@ -1,96 +1,87 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>s</title>
-<link rel="icon" href="images/favicon.gif" type="image/x-icon"/>
-<link rel="shortcut icon" href="images/favicon.gif" type="image/x-icon"/> 
-<link rel="stylesheet" type="text/css" href="css/styles.css"/>
+<title>GLSL Implicit Curves</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/WebGL-Tools/public/vendor/bootstrap/css/bootstrap.min.css">
+<script src="/WebGL-Tools/public/vendor/jquery.min.js"></script>
+  <script src="/WebGL-Tools/public/vendor/jquery-ui.js"></script>
+<script src="/WebGL-Tools/public/vendor/bootstrap/js/bootstrap.min.js"></script>
+
+<style type="text/css">
+* { margin:0; padding:0; } /* to remove the top and left whitespace */
+
+html, body { width:100%; height:100%; } /* just to be sure these are full screen*/
+
+canvas { display:block; } /* To remove the scrollbars */
+
+/* to show the canvas bounds */
+canvas {
+    background: #eee;
+}
+
+#outer {
+   position:relative;
+   z-index:1;
+}
+
+#inner { position:absolute; width:auto; height:auto; z-index:10; left: 0px; top: 0px; } .modal {bottom: 1%; top: auto; right: 1%; left: auto; overflow: hidden; }
+.modal-dialog{ margin-right: 0; margin-left: 0; }</style>
 </head>
-
-<script src="js/jquery-1.10.2.js"></script>
-
 <body>
-   <div class="bg">
-    <!--start container-->
-    <div id="container">
-    <!--start header-->
-    <header>
-      <!--start logo-->
-      <h1></h1>
-      <h3></h3>
-      <h1>GLSL Implicit Curves</h1>
-      <!--end logo-->
-      <!--start menu -->
-  	   <nav>
-         <ul>
-         <li><h3></h3><input type="text" id="eText" value="y^2 - x^3 + x + 0.0025"><h3></h3></li>
-         <li><h3></h3><button onclick="solve()">Draw!</button><h3></h3></li>
-         <li><h3></h3><h4>Last update: 11.03.2015 </h4><h3></h3></li>
-         </ul>
-      </nav>
-  	   <!--end menu-->
-      <!--end header-->
-	</header>
-   <!--start intro-->
-   <div class="holder_content">
-   <div style=";width:auto;height:400px;background:#F9EECF;border:1px dotted black;text-align:center">
-            <canvas id="canvas" width="100%" height="100%"></canvas>
+  <div id="outer">
+    <canvas class="google-map-canvas" id="canvas"></canvas>
+  </div>
+  <div id="inner"></div>
+  <div id="myModal" class="modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="row">
+            <div class="col-md-10">
+              <input type="text" class="form-control" id="eText" value="y^2 - x^3 + x + 0.0025">
+            </div>
+            <div class="col-md-2">
+              <button type="button" class="btn btn-success" onclick="solve()">Solve!</button>
+            </div>
           </div>
-   </div>
-   <!--end intro-->
-   <!--start holder-->
-   <div class="holder_content">
-      <section class="group4">
-        <h3>Controls</h3>
-        <div id="user">
-          <h4></h4>
-          <label "=" for="inputZoom">viewport scale</label>
-          <input id="inputZoom" type="number" value="1" step="0.01">
-          <h4>Anti-Aliasing</h4>
-          <form action="">
-            <input type="radio" name="anti-aliasing" value="none" onchange="render();" checked >none
-            <input type="radio" name="anti-aliasing" value="fxaa" onchange="render();">FXAA
-            <input type="radio" name="anti-aliasing" value="taubin" onchange="render();">Taubin<br>
-          </form>
-          <h4></h4>
         </div>
-        
-        <h3>Functions</h3>
-        <button type="button" onclick="setFunction('0.004 +0.110*x -0.177*y -0.174*x*x +0.224*x*y -0.303*y*y -0.168*x*x*x +0.327*x*x*y -0.087*x*y*y -0.013*y*y*y +0.235*x*x*x*x -0.667*x*x*x*y +0.745*x*x*y*y -0.029*x*y*y*y +0.072*y*y*y*y')">Taubin</button>
-        <button type="button" onclick="setFunction('y^2 - x^3 + x + 0.0025')">Cubic</button>
-         <h3>Usage</h3>
-         <font color="blue"><h3>^2,^3,(),+,-,*.</h3></font>
-         <p> - use only x and y </p>
-         <p> - use only ^3 or ^2: x^3, y^2, (x+2)^3 </p>
-         <p> - xx don't work, use x*x instead </p>
-         <p> - x2 don't work, use x^2 instead </p>
-         <p> - any other symbol (a,b,...,z) is considered a constant </p>
-         <p> - an user control is displayed for each constant </p> 
-         <h4></h4>
-         <h3>Log</h3>
-         <p> - glsl rounding </p>
-         <p> - controls <p>
-         <p> - pan (mouse drag) and zoom (wheel) </p>
-         <p> - added ^2 and ^3 </p>
-       </section>
-   </div>
-   <!--end holder-->
-   </div>
-   <!--end container-->
-   <!--start footer-->
-   <footer>
-      <div class="container">  
-         <div id="FooterTwo"> CSS by <a href="http://www.marijazaric.com">marija zaric - creative simplicity</a> © 2011 Minimalism </div>
-         <div id="FooterTree"></div> 
+        <div class="modal-body">
+          <div class="container-fluid">
+            <div class="row">
+              <div class="col-md-5">
+                <label "=" for="inputZoom">Zoom</label>
+                <input id="inputZoom" type="number" value="1" step="0.01">
+                <div id="user"></div>
+                <h4>Anti-Aliasing</h4>
+                <form action="">
+                  <input type="radio" name="anti-aliasing" value="none" onchange="render();" checked>none
+                  <input type="radio" name="anti-aliasing" value="fxaa" onchange="render();">FXAA
+                  <input type="radio" name="anti-aliasing" value="taubin" onchange="render();">Taubin</form>
+                <h4>Functions</h4>
+                <button type="button" class="btn btn-primary" onclick="setFunction('0.004 +0.110*x -0.177*y -0.174*x*x +0.224*x*y -0.303*y*y -0.168*x*x*x +0.327*x*x*y -0.087*x*y*y -0.013*y*y*y +0.235*x*x*x*x -0.667*x*x*x*y +0.745*x*x*y*y -0.029*x*y*y*y +0.072*y*y*y*y')">Taubin</button>
+                <button type="button" class="btn btn-danger" onclick="setFunction('y^2 - x^3 + x + 0.0025')">Cubic</button>
+              </div>
+              <div class="col-md-7">
+                <ul class="list-group">
+                  <li class="list-group-item list-group-item-success">use ^2,^3,(),+,-,* and variables x, y</li>
+                  <li class="list-group-item list-group-item-info">any other symbol is considered a constant</li>
+                  <li class="list-group-item list-group-item-danger">xx or x2 don't work</li>
+                    <li class="list-group-item list-group-item-warning">last update: 25/06/2015</li>
+                </ul>
+              </div>
+            </div>
+            <div class="row"></div>
+          </div>
+        </div>
       </div>
-   </footer>
-   <!--end footer-->
-   </div>
-   <!--end bg-->
-   <!-- Free template distributed by http://freehtml5templates.com -->
-  </body>
+    </div>
+    <!-- /.modal-content -->
+  </div>
+  <!-- /.modal-dialog -->
+  </div>
+</body>
 
 <script src="js/Detector.js"></script>
 <script src="js/webgl-utils.js"></script>
@@ -343,22 +334,52 @@ function setFunction(e) {
   solve();
 }
 
+        function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                
+                /**
+                 * Your drawings need to be inside this function otherwise they will be reset when 
+                 * you resize the browser window and the canvas goes will be cleared.
+                 */
+                //drawStuff(); 
+        }
+       
+        
 function init() {
   // Get A WebGL context
   canvas = document.getElementById("canvas");
     // Make it visually fill the positioned parent
-  canvas.style.width ='100%';
-  canvas.style.height='100%';
+  //canvas.style.width ='100%';
+  //canvas.style.height='auto';
   // ...then set the internal size to match
   canvas.width  = canvas.offsetWidth;
   canvas.height = canvas.offsetHeight;
   
+  
+  
+window.addEventListener('resize', resizeCanvas, false);
+         resizeCanvas();
+ 
   HEIGHT = canvas.height;
   WIDTH = canvas.width;
+ 
   
   gl = getWebGLContext(canvas);
   if (!gl)
     return;
+    
+      $("#myModal").draggable({
+    handle: ".modal-dialog"
+  });
+  $('#myModal').modal({
+  backdrop: 'static',
+  keyboard: false
+})
+  $('#myModal').modal('show');
+   $('.modal-backdrop').removeClass("modal-backdrop");   
+
+
   $('#inputZoom').bind('keyup mouseup', updateUniforms);
   // MOUSE INTERACTIONS ----------------------------------------------------
   canvas.addEventListener('mousemove', function(evt) {
