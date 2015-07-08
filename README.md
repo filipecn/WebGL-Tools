@@ -1,6 +1,8 @@
 WebGL-Tools
 ===========
 
-Some basic tools for mesh/data/simulation visualization using Three.js.
+Some basic tools for mesh/data/simulation visualization using WebGL.
 
-Most of the code was taken from examples given in http://stemkoski.github.io/Three.js.
+To check the tools running: http://filipecn.github.io/WebGL-Tools/
+
+Some of the examples use Three.js. (reference: http://stemkoski.github.io/Three.js)
