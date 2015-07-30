@@ -1,5 +1,33 @@
 var SHADER = {};
 
+SHADER.createProgram = function(gl, shaders, opt_attribs, opt_locations) {
+  var program = gl.createProgram();
+  for (var ii = 0; ii < shaders.length; ++ii) {
+    gl.attachShader(program, shaders[ii]);
+  }
+  if (opt_attribs) {
+    for (var ii = 0; ii < opt_attribs.length; ++ii) {
+      gl.bindAttribLocation(
+          program,
+          opt_locations ? opt_locations[ii] : ii,
+          opt_attribs[ii]);
+    }
+  }
+  gl.linkProgram(program);
+
+  // Check the link status
+  var linked = gl.getProgramParameter(program, gl.LINK_STATUS);
+  if (!linked) {
+      // something went wrong with the link
+      var lastError = gl.getProgramInfoLog (program);
+      console.log("Error in program linking:" + lastError);
+
+      gl.deleteProgram(program);
+      return null;
+  }
+  return program;
+};
+
 SHADER.fromScript = function(gl, id){
 	var shaderScript = document.getElementById(id);
 	if (!shaderScript)
@@ -54,19 +82,19 @@ SHADER.Shader = function(gl, vs_source, fs_source){
 	//var fragmentShader = SHADER.fromScript(gl, fs_source);
 	var vertexShader = SHADER.fromSource(gl, vs_source, gl.VERTEX_SHADER);
 	var fragmentShader = SHADER.fromSource(gl, fs_source, gl.FRAGMENT_SHADER);
-	this.program = createProgram(gl, [vertexShader, fragmentShader]);
+	this.program = SHADER.createProgram(gl, [vertexShader, fragmentShader]);
 };
 
 SHADER.ShaderFromFile = function(gl, vs_source, fs_source){
 	var vertexShader = SHADER.fromSource(gl, vs_source, gl.VERTEX_SHADER);
 	var fragmentShader = SHADER.fromSource(gl, fs_source, gl.FRAGMENT_SHADER);
-	this.program = createProgram(gl, [vertexShader, fragmentShader]);
+	this.program = SHADER.createProgram(gl, [vertexShader, fragmentShader]);
 }
 
 SHADER.Shader.prototype.loadText = function(gl, vs_source, fs_source){
 	var vertexShader = SHADER.fromSource(gl, vs_source, gl.VERTEX_SHADER);
 	var fragmentShader = SHADER.fromSource(gl, fs_source, gl.FRAGMENT_SHADER);
-	this.program = createProgram(gl, [vertexShader, fragmentShader]);
+	this.program = SHADER.createProgram(gl, [vertexShader, fragmentShader]);
 }
 
 SHADER.Shader.prototype.getLocation = function(gl, attr){

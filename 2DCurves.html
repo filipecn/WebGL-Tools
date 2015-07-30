@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="/WebGL-Tools/public/vendor/bootstrap/css/bootstrap.min.css">
 <script src="/WebGL-Tools/public/vendor/jquery.min.js"></script>
-  <script src="/WebGL-Tools/public/vendor/jquery-ui.js"></script>
+<script src="/WebGL-Tools/public/vendor/jquery-ui.js"></script>
 <script src="/WebGL-Tools/public/vendor/bootstrap/js/bootstrap.min.js"></script>
 
 <style type="text/css">
@@ -53,6 +53,8 @@ canvas {
               <div class="col-md-5">
                 <label "=" for="inputZoom">Zoom</label>
                 <input id="inputZoom" type="number" value="1" step="0.01">
+                <label "=" for="subPixels">SP</label>
+                <input id="subPixels" type="number" value="1" step="1">  
                 <div id="user"></div>
                 <h4>Anti-Aliasing</h4>
                 <form action="">
@@ -102,6 +104,7 @@ var dragging = false;
 var pan = {x:0,y:0};
 var curPan = {x:0,y:0};
 var zoom = 1.0;
+var subpixels = 1;
 
 // global variables
 var canvas;
@@ -226,11 +229,15 @@ $.get("/WebGL-Tools/2dCurves/2dCurves.vs", function(data_2dCurves_vs){
 
 function updateUniforms(e){
   zoom = document.getElementById('inputZoom').value;
+  subpixels = document.getElementById('subPixels').value;
+  if(subpixels < 1)
+    subpixels = 1;
   curvesShader.start(gl);
     curvesShader.setUniform2f(gl, "size", [WIDTH,HEIGHT]);
     curvesShader.setUniform2f(gl, "ratio", [1.0,HEIGHT/WIDTH]);
     curvesShader.setUniform2f(gl, "offset", [curPan.x,curPan.y]);
     curvesShader.setUniform1f(gl, "zoom", zoom);
+    curvesShader.setUniform1f(gl, "subpixels", subpixels);
       constants.forEach(function(value) {
         curvesShader.setUniform1f(gl, value, document.getElementById('input' + value).value);
       });
@@ -266,8 +273,49 @@ function solve() {
   //console.log(constants.size);
   
   fs += ia_fs + "\n" + 
-      IAPARSER.parse(document.getElementById("eText").value) +
-      iaFooter_fs;
+      IAPARSER.parse(document.getElementById("eText").value) 
+      /*iaFooter_fs*/ 
+      + "void main()"
+ + "{"
+ + "float x = point.x;"
+ + "float y = point.y;"
+ + "float w = 0.5*(worldSize.x/size.x);"
+ + "float h = 0.5*(worldSize.y/size.y);"
+ + "Interval v = F(x,y,w,h);"
+ + "if (v[0]>0.0)"
+ + "  gl_FragColor=vec4(1.0,1.0,1.0,1.0);"
+ + "else if (v[1]<0.0)"
+ + "  gl_FragColor=vec4(0.0,0.0,0.0,1.0);"
+ + "else{"
+ + " gl_FragColor=vec4(1.0,0.0,0.0,1.0);"  
+ + "const int subpixels = " + subpixels + ";"     
+ + " float subw = w / float(subpixels);"
+ + "   float subh = h / float(subpixels);"
++ "    int inside = 0, outside = 0, border = 0;"
++ "    for(int i = 0; i < subpixels; i++)"
++ "      for(int j = 0; j < subpixels; j++){"
++ "        float subx = float(i)*2.0*subw + subw + x - w;"
++ "        float suby = float(j)*2.0*subh + subh + y - h;    "
++ "        Interval subv = F(subx, suby, subw, subh);"
++ "        if(subv[0] > 0.0)"
++ "          outside++;"
++ "        else if(subv[1] < 0.0)"
++ "          inside++;"
++ "        else border++;"
++ "      }"
+      
++ "  if (border > 0)"
++ "    gl_FragColor=vec4(1.0,0.0,0.0,1.0);"
++ "  else if (inside > 0 && outside > 0)"
++ "    gl_FragColor=vec4(1.0,0.0,1.0,1.0);"
++ "  else if(inside > 0)"
++ "    gl_FragColor=vec4(0.0,0.0,0.0,1.0);"
++ "  else" 
++ "    gl_FragColor=vec4(1.0,1.0,1.0,1.0);"
++ "vec3 color = vec3(1.0)*float(outside) + vec3(1.0,0.0,0.0)*float(border);"
++ "gl_FragColor=vec4(color/float(subpixels*subpixels),1.0);"
++ "  }"
++ "}";
         
   console.log(fs);
   console.log("CONSTANTS");
@@ -420,6 +468,7 @@ window.addEventListener('resize', resizeCanvas, false);
         curPan.y = pan.y;
       }
       dragging = false;
+      solve();
       }, false);
   
   canvas.addEventListener('mousewheel', function(evt) {
